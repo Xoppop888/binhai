@@ -137,13 +137,14 @@ const ENGLISH_BRANDS: Record<string, string> = {
   '起亚': 'Kia', kia: 'Kia', киа: 'Kia',
   '雪佛兰': 'Chevrolet', chevrolet: 'Chevrolet',
   'шевроле': 'Chevrolet',
+  'пежо': 'Peugeot', peugeot: 'Peugeot', '标致': 'Peugeot',
+  'шкода': 'Skoda', skoda: 'Skoda', '斯柯达': 'Skoda',
   '沃尔沃': 'Volvo', volvo: 'Volvo',
   '路虎': 'Land Rover', 'land rover': 'Land Rover',
   '捷豹': 'Jaguar', jaguar: 'Jaguar',
   '雷克萨斯': 'Lexus', lexus: 'Lexus',
   '凯迪拉克': 'Cadillac', cadillac: 'Cadillac',
   '保时捷': 'Porsche', porsche: 'Porsche',
-  '斯柯达': 'Skoda', skoda: 'Skoda',
   '三菱': 'Mitsubishi', mitsubishi: 'Mitsubishi',
   '斯巴鲁': 'Subaru', subaru: 'Subaru',
   '五十铃': 'Isuzu', isuzu: 'Isuzu',
@@ -158,6 +159,8 @@ export function englishBrand(brand: string, brandZh?: string): string {
   return brand
     .replace(/хавал|хавей/gi, 'Haval')
     .replace(/шевроле/gi, 'Chevrolet')
+    .replace(/пежо/gi, 'Peugeot')
+    .replace(/шкода/gi, 'Skoda')
     .replace(/тойота/gi, 'Toyota')
     .replace(/хонда/gi, 'Honda')
     .replace(/мазда/gi, 'Mazda')
@@ -168,15 +171,23 @@ export function englishBrand(brand: string, brandZh?: string): string {
 }
 
 const MODEL_REPLACEMENTS: Array<[RegExp, string]> = [
-  [/\bшевроле\b/gi, 'Chevrolet'],
-  [/\bмонза\b/gi, 'Monza'],
-  [/\bтойота\b/gi, 'Toyota'],
-  [/\bкоролла\b/gi, 'Corolla'],
-  [/\bхавал\b/gi, 'Haval'],
-  [/\bхавей\b/gi, 'Haval'],
-  [/\bдвойной\s+гибрид\b/gi, 'Dual Hybrid'],
-  [/\bгибрид\b/gi, 'Hybrid'],
-  [/\bкроссовер\b/gi, 'Crossover'],
+  [/шевроле/gi, 'Chevrolet'],
+  [/монза/gi, 'Monza'],
+  [/тойота/gi, 'Toyota'],
+  [/королла/gi, 'Corolla'],
+  [/хавал/gi, 'Haval'],
+  [/хавей/gi, 'Haval'],
+  [/пежо/gi, 'Peugeot'],
+  [/шкода/gi, 'Skoda'],
+  [/рапид/gi, 'Rapid'],
+  [/аксела/gi, 'Axela'],
+  [/силфи/gi, 'Sylphy'],
+  [/левин/gi, 'Levin'],
+  [/синъяо/gi, 'Xinyao'],
+  [/двойной\s+гибрид/gi, 'Dual Hybrid'],
+  [/гибрид/gi, 'Hybrid'],
+  [/кроссовер/gi, 'Crossover'],
+  [/\s*,?\s*модель\s*/gi, ' '],
 ];
 
 export function englishModel(model: string): string {
