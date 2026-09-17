@@ -106,16 +106,16 @@ export function descriptionFeatures(description?: string): string[] {
 
 const ENGLISH_BRANDS: Record<string, string> = {
   '大众': 'Volkswagen', volkswagen: 'Volkswagen',
-  '马自达': 'Mazda', mazda: 'Mazda',
-  '丰田': 'Toyota', toyota: 'Toyota',
-  '本田': 'Honda', honda: 'Honda',
-  '日产': 'Nissan', nissan: 'Nissan',
+  '马自达': 'Mazda', mazda: 'Mazda', мазда: 'Mazda',
+  '丰田': 'Toyota', toyota: 'Toyota', тойота: 'Toyota',
+  '本田': 'Honda', honda: 'Honda', хонда: 'Honda',
+  '日产': 'Nissan', nissan: 'Nissan', ниссан: 'Nissan',
   '哈弗': 'Haval', haval: 'Haval', хавал: 'Haval',
   '长城': 'GWM', greatwall: 'GWM', 'great wall': 'GWM',
   '比亚迪': 'BYD', byd: 'BYD',
-  '奇瑞': 'Chery', chery: 'Chery',
-  '吉利': 'Geely', geely: 'Geely',
-  '长安': 'Changan', changan: 'Changan',
+  '奇瑞': 'Chery', chery: 'Chery', чери: 'Chery',
+  '吉利': 'Geely', geely: 'Geely', джили: 'Geely',
+  '长安': 'Changan', changan: 'Changan', чанган: 'Changan',
   '五菱': 'Wuling', wuling: 'Wuling',
   '宝骏': 'Baojun', baojun: 'Baojun',
   '广汽传祺': 'GAC Trumpchi', trumpchi: 'GAC Trumpchi',
@@ -128,12 +128,15 @@ const ENGLISH_BRANDS: Record<string, string> = {
   '红旗': 'Hongqi', hongqi: 'Hongqi',
   '宝马': 'BMW', bmw: 'BMW',
   '奔驰': 'Mercedes-Benz', mercedes: 'Mercedes-Benz',
+  'мерседес': 'Mercedes-Benz',
   '奥迪': 'Audi', audi: 'Audi',
   '福特': 'Ford', ford: 'Ford',
+  'форд': 'Ford',
   '特斯拉': 'Tesla', tesla: 'Tesla',
-  '现代': 'Hyundai', hyundai: 'Hyundai',
-  '起亚': 'Kia', kia: 'Kia',
+  '现代': 'Hyundai', hyundai: 'Hyundai', хендай: 'Hyundai',
+  '起亚': 'Kia', kia: 'Kia', киа: 'Kia',
   '雪佛兰': 'Chevrolet', chevrolet: 'Chevrolet',
+  'шевроле': 'Chevrolet',
   '沃尔沃': 'Volvo', volvo: 'Volvo',
   '路虎': 'Land Rover', 'land rover': 'Land Rover',
   '捷豹': 'Jaguar', jaguar: 'Jaguar',
@@ -144,6 +147,7 @@ const ENGLISH_BRANDS: Record<string, string> = {
   '三菱': 'Mitsubishi', mitsubishi: 'Mitsubishi',
   '斯巴鲁': 'Subaru', subaru: 'Subaru',
   '五十铃': 'Isuzu', isuzu: 'Isuzu',
+  'исузу': 'Isuzu',
 };
 
 export function englishBrand(brand: string, brandZh?: string): string {
@@ -151,7 +155,32 @@ export function englishBrand(brand: string, brandZh?: string): string {
     const normalized = candidate.trim().toLowerCase();
     if (ENGLISH_BRANDS[normalized]) return ENGLISH_BRANDS[normalized];
   }
-  return brand;
+  return brand
+    .replace(/хавал|хавей/gi, 'Haval')
+    .replace(/шевроле/gi, 'Chevrolet')
+    .replace(/тойота/gi, 'Toyota')
+    .replace(/хонда/gi, 'Honda')
+    .replace(/мазда/gi, 'Mazda')
+    .replace(/ниссан/gi, 'Nissan')
+    .replace(/хендай/gi, 'Hyundai')
+    .replace(/киа/gi, 'Kia')
+    .trim();
+}
+
+const MODEL_REPLACEMENTS: Array<[RegExp, string]> = [
+  [/\bшевроле\b/gi, 'Chevrolet'],
+  [/\bмонза\b/gi, 'Monza'],
+  [/\bтойота\b/gi, 'Toyota'],
+  [/\bкоролла\b/gi, 'Corolla'],
+  [/\bхавал\b/gi, 'Haval'],
+  [/\bхавей\b/gi, 'Haval'],
+  [/\bдвойной\s+гибрид\b/gi, 'Dual Hybrid'],
+  [/\bгибрид\b/gi, 'Hybrid'],
+  [/\bкроссовер\b/gi, 'Crossover'],
+];
+
+export function englishModel(model: string): string {
+  return MODEL_REPLACEMENTS.reduce((result, [pattern, replacement]) => result.replace(pattern, replacement), model).replace(/\s+/g, ' ').trim();
 }
 
 export const SYNC_META = {
@@ -236,7 +265,7 @@ function mapSupabaseRowToCar(row: any): Car {
     id: row.slug || row.id,
     brand: englishBrand(row.brand || '', row.brand_zh || ''),
     brandZh: row.brand_zh || '',
-    model: row.model || '',
+    model: englishModel(row.model || ''),
     year: row.year || 0,
     trim: row.trim || '',
     priceCny: row.price_cny || 0,

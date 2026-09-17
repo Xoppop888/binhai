@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Car, formatCny } from '../data/cars';
+import { Car, englishBrand, englishModel, formatCny } from '../data/cars';
 import CarModal from './CarModal';
 
 interface CatalogProps { cars: Car[]; source: string; }
@@ -28,16 +28,16 @@ export default function Catalog({ cars, source }: CatalogProps) {
         <div className="car-grid">
           {visibleCars.map((car) => (
             <article className="car-card" key={car.id}>
-              <button className="car-image-wrap" onClick={() => setSelectedCar(car)} aria-label={`Открыть ${car.brand} ${car.model}`}>
-                <img className="car-image" src={car.image} alt={`${car.brand} ${car.model}`} />
+              <button className="car-image-wrap" onClick={() => setSelectedCar(car)} aria-label={`Открыть ${englishBrand(car.brand, car.brandZh)} ${englishModel(car.model)}`}>
+                <img className="car-image" src={car.image} alt={`${englishBrand(car.brand, car.brandZh)} ${englishModel(car.model)}`} />
                 <span className="car-tag">{car.category === 'new' ? 'Новый' : 'Проверен'}</span>
               </button>
               <div className="car-body">
-                <div className="car-meta"><span className="car-brand">{car.brandZh || car.brand}</span><span>{car.year || '—'}</span></div>
-                <h3>{car.brand} {car.model}</h3>
+                <div className="car-meta"><span className="car-brand">{englishBrand(car.brand, car.brandZh)}</span><span>{car.year || '—'}</span></div>
+                <h3>{englishBrand(car.brand, car.brandZh)} {englishModel(car.model)}</h3>
                 <p className="car-trim">{car.trim || 'Комплектация уточняется'}</p>
                 <div className="car-bottom">
-                  <div className="car-price"><small>Цена в Китае</small><strong>{formatCny(car.priceCny)}</strong></div>
+                  <div className="car-price"><small>С доставкой до Уссурийска</small><strong>{formatCny(car.priceCny)}</strong></div>
                   <button className="button-outline" onClick={() => setSelectedCar(car)}>Подробнее →</button>
                 </div>
               </div>
