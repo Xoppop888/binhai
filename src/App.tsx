@@ -5,7 +5,7 @@ import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/binhai">
       <Routes>
         <Route path="/" element={<SitePage />} />
         <Route path="/admin/login" element={<AdminLogin />} />
