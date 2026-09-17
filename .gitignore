@@ -1,0 +1,12 @@
+node_modules/
+.next/
+dist/
+build/
+*.log
+
+# Секреты — никогда не коммитить
+.env
+.env.local
+.env.*.local
+scripts/.env
+scripts/node_modules/

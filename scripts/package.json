@@ -1,0 +1,19 @@
+{
+  "name": "binhai-parser",
+  "version": "2.0.0",
+  "description": "Парсер BINHAI AUTO (bhgjauto.com) для загрузки данных в Supabase",
+  "type": "module",
+  "main": "parse-to-supabase.js",
+  "scripts": {
+    "parse": "node parse-to-supabase.js",
+    "parse:dry": "DRY_RUN=1 LIMIT=5 node parse-to-supabase.js",
+    "install-browser": "playwright install chromium"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "axios": "^1.7.7",
+    "cheerio": "^1.0.0",
+    "dotenv": "^16.3.1",
+    "playwright": "^1.47.0"
+  }
+}
