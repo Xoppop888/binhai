@@ -3,11 +3,15 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
+  base: '/binhai/',
+
   plugins: [react(), tailwindcss()],
+
   server: {
     port: 3000,
     host: true,
   },
+
   build: {
     outDir: 'dist',
     sourcemap: false,
