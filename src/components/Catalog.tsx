@@ -6,6 +6,10 @@ interface CatalogProps { cars: Car[]; source: string; }
 
 export default function Catalog({ cars, source }: CatalogProps) {
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 36;
+  const pageCount = Math.max(1, Math.ceil(cars.length / pageSize));
+  const visibleCars = cars.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <section className="section catalog-section" id="catalog">
@@ -22,7 +26,7 @@ export default function Catalog({ cars, source }: CatalogProps) {
         </div>
 
         <div className="car-grid">
-          {cars.map((car) => (
+          {visibleCars.map((car) => (
             <article className="car-card" key={car.id}>
               <button className="car-image-wrap" onClick={() => setSelectedCar(car)} aria-label={`Открыть ${car.brand} ${car.model}`}>
                 <img className="car-image" src={car.image} alt={`${car.brand} ${car.model}`} />
@@ -41,6 +45,11 @@ export default function Catalog({ cars, source }: CatalogProps) {
           ))}
         </div>
         {cars.length === 0 && <p>Автомобили пока не загружены.</p>}
+        {pageCount > 1 && <div className="pagination" aria-label="Страницы каталога">
+          <button className="page-button" disabled={page === 1} onClick={() => { setPage((value) => value - 1); window.scrollTo({ top: document.getElementById('catalog')?.offsetTop ?? 0, behavior: 'smooth' }); }}>← Назад</button>
+          <span>Страница {page} из {pageCount}</span>
+          <button className="page-button" disabled={page === pageCount} onClick={() => { setPage((value) => value + 1); window.scrollTo({ top: document.getElementById('catalog')?.offsetTop ?? 0, behavior: 'smooth' }); }}>Вперёд →</button>
+        </div>}
       </div>
       {selectedCar && <CarModal car={selectedCar} onClose={() => setSelectedCar(null)} />}
     </section>

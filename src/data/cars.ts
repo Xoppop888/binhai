@@ -70,6 +70,90 @@ export const formatCny = (price: number): string => {
   return `¥${price.toLocaleString('zh-CN')}`;
 };
 
+/** Приводит сырой текст парсера к короткому описанию комплектации. */
+export function cleanCarDescription(description?: string): string {
+  if (!description) return '';
+  let text = description.replace(/\s+/g, ' ').trim();
+  const cutMarkers = [
+    'Видео интерьера',
+    'Видео прибора',
+    'Видео шасси',
+    'Видео внешнего вида',
+    'Видео о двигателе',
+    'Комплектация товара:',
+    'Ватсап:',
+    'WhatsApp:',
+    'Электронная почта:',
+    'Email:',
+    'Немедленно проконсультируйтесь',
+    'Свяжитесь с нами',
+    'Другое содержание',
+  ];
+  for (const marker of cutMarkers) {
+    const index = text.indexOf(marker);
+    if (index >= 0) text = text.slice(0, index).trim();
+  }
+  text = text.replace(/^Комплектация автомобиля\s*:?\s*/i, '').trim();
+  text = text.replace(/(?:тел\.?|телефон|whatsapp|ватсап|email|электронная почта)\s*[:：]?\s*[^,;]+/gi, '').trim();
+  return text.replace(/[.;]+$/, '').trim();
+}
+
+export function descriptionFeatures(description?: string): string[] {
+  const clean = cleanCarDescription(description);
+  if (!clean) return [];
+  return clean.split(/[,;、，]+/).map((item) => item.trim()).filter(Boolean);
+}
+
+const ENGLISH_BRANDS: Record<string, string> = {
+  '大众': 'Volkswagen', volkswagen: 'Volkswagen',
+  '马自达': 'Mazda', mazda: 'Mazda',
+  '丰田': 'Toyota', toyota: 'Toyota',
+  '本田': 'Honda', honda: 'Honda',
+  '日产': 'Nissan', nissan: 'Nissan',
+  '哈弗': 'Haval', haval: 'Haval', хавал: 'Haval',
+  '长城': 'GWM', greatwall: 'GWM', 'great wall': 'GWM',
+  '比亚迪': 'BYD', byd: 'BYD',
+  '奇瑞': 'Chery', chery: 'Chery',
+  '吉利': 'Geely', geely: 'Geely',
+  '长安': 'Changan', changan: 'Changan',
+  '五菱': 'Wuling', wuling: 'Wuling',
+  '宝骏': 'Baojun', baojun: 'Baojun',
+  '广汽传祺': 'GAC Trumpchi', trumpchi: 'GAC Trumpchi',
+  '领克': 'Lynk & Co', lynk: 'Lynk & Co',
+  '蔚来': 'NIO', nio: 'NIO',
+  '小鹏': 'XPeng', xpeng: 'XPeng',
+  '理想': 'Li Auto', 'li auto': 'Li Auto',
+  '极氪': 'Zeekr', zeekr: 'Zeekr',
+  '哪吒': 'Neta', neta: 'Neta',
+  '红旗': 'Hongqi', hongqi: 'Hongqi',
+  '宝马': 'BMW', bmw: 'BMW',
+  '奔驰': 'Mercedes-Benz', mercedes: 'Mercedes-Benz',
+  '奥迪': 'Audi', audi: 'Audi',
+  '福特': 'Ford', ford: 'Ford',
+  '特斯拉': 'Tesla', tesla: 'Tesla',
+  '现代': 'Hyundai', hyundai: 'Hyundai',
+  '起亚': 'Kia', kia: 'Kia',
+  '雪佛兰': 'Chevrolet', chevrolet: 'Chevrolet',
+  '沃尔沃': 'Volvo', volvo: 'Volvo',
+  '路虎': 'Land Rover', 'land rover': 'Land Rover',
+  '捷豹': 'Jaguar', jaguar: 'Jaguar',
+  '雷克萨斯': 'Lexus', lexus: 'Lexus',
+  '凯迪拉克': 'Cadillac', cadillac: 'Cadillac',
+  '保时捷': 'Porsche', porsche: 'Porsche',
+  '斯柯达': 'Skoda', skoda: 'Skoda',
+  '三菱': 'Mitsubishi', mitsubishi: 'Mitsubishi',
+  '斯巴鲁': 'Subaru', subaru: 'Subaru',
+  '五十铃': 'Isuzu', isuzu: 'Isuzu',
+};
+
+export function englishBrand(brand: string, brandZh?: string): string {
+  for (const candidate of [brandZh, brand].filter(Boolean) as string[]) {
+    const normalized = candidate.trim().toLowerCase();
+    if (ENGLISH_BRANDS[normalized]) return ENGLISH_BRANDS[normalized];
+  }
+  return brand;
+}
+
 export const SYNC_META = {
   time: '2026-03-17 12:00:00',
   interval: '1-6 часов',
@@ -150,7 +234,7 @@ function mapSupabaseRowToCar(row: any): Car {
   const images: string[] = Array.isArray(row.images) ? row.images : [];
   return {
     id: row.slug || row.id,
-    brand: row.brand || '',
+    brand: englishBrand(row.brand || '', row.brand_zh || ''),
     brandZh: row.brand_zh || '',
     model: row.model || '',
     year: row.year || 0,
