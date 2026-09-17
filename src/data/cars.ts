@@ -82,28 +82,8 @@ export const SYNC_META = {
  * Загрузка данных из Supabase
  * ------------------------------------------------------------------ */
 export async function loadCars(): Promise<{ cars: Car[]; syncedAt: string; fromApi: boolean; source: string }> {
-  // Проверяем кэш в localStorage (1 час)
-  const cached = localStorage.getItem('binhai_cars_cache');
-  const cachedTime = localStorage.getItem('binhai_cars_cache_time');
-  
-  if (cached && cachedTime) {
-    const cacheAge = Date.now() - parseInt(cachedTime);
-    if (cacheAge < 3600000) { // 1 час
-      try {
-        const cars = JSON.parse(cached);
-        return { 
-          cars, 
-          syncedAt: new Date(parseInt(cachedTime)).toISOString(), 
-          fromApi: false,
-          source: 'cache'
-        };
-      } catch {
-        // Игнорируем ошибки кэша
-      }
-    }
-  }
-
-  // Загрузка из Supabase
+  // Сначала обращаемся к Supabase. Это важно: старый localStorage-кэш
+  // не должен скрывать новые записи после запуска парсера.
   const url = import.meta.env.VITE_SUPABASE_URL;
   const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -134,9 +114,26 @@ export async function loadCars(): Promise<{ cars: Car[]; syncedAt: string; fromA
             source: 'supabase'
           };
         }
+      } else {
+        console.warn('Supabase returned no cars; using cache or fallback.');
       }
     } catch (error) {
       console.warn('Supabase load failed, using fallback...', error);
+    }
+  }
+
+  // Если Supabase не настроен или временно недоступен — проверяем кэш.
+  const cached = localStorage.getItem('binhai_cars_cache');
+  const cachedTime = localStorage.getItem('binhai_cars_cache_time');
+  if (cached && cachedTime && Date.now() - parseInt(cachedTime) < 3600000) {
+    try {
+      const cars = JSON.parse(cached) as Car[];
+      if (Array.isArray(cars) && cars.length > 0) {
+        return { cars, syncedAt: new Date(parseInt(cachedTime)).toISOString(), fromApi: false, source: 'cache' };
+      }
+    } catch {
+      localStorage.removeItem('binhai_cars_cache');
+      localStorage.removeItem('binhai_cars_cache_time');
     }
   }
 
