@@ -72,9 +72,20 @@ async function collectDetailLinks() {
   try {
     for (const { url, category } of LISTINGS) {
       console.log(`\n📄 Листинг: ${url} (${category})`);
-      const page = await browser.newPage();
+      const page = await browser.newPage({
+        userAgent:
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36',
+      });
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
-      await page.waitForTimeout(1500);
+      await page.waitForTimeout(2500);
+
+      // Диагностика: если ссылок 0, полезно понять, что вообще загрузилось
+      const debugTitle = await page.title();
+      const debugFinalUrl = page.url();
+      const debugAnchorCount = await page.$$eval('a', (as) => as.length);
+      const debugBodySnippet = (await page.evaluate(() => document.body?.innerText || '')).slice(0, 300);
+      console.log(`  🔍 title: "${debugTitle}" | url: ${debugFinalUrl} | всего <a>: ${debugAnchorCount}`);
+      console.log(`  🔍 текст страницы (первые 300 симв.): ${JSON.stringify(debugBodySnippet)}`);
 
       let pageNum = 1;
       let addedOnThisPage = -1;
