@@ -7,7 +7,7 @@ export interface Car {
   trim: string;
   priceCny: number;
   image: string;
-  sourceUrl: string;
+  sourceUrl?: string;
   /** Категория объявления на сайте-источнике */
   category?: 'used' | 'new' | string;
   /** Вся галерея фото (image — просто images[0] для обратной совместимости) */
@@ -40,7 +40,6 @@ export const CARS: Car[] = [
     trim: '280TSI 两驱豪华版',
     priceCny: 115700,
     image: 'https://omo-oss-image.thefastimg.com/portal-saas/pg2026060513424661000/cms/image/2268b794-9cbb-47f5-a5b6-e0fc2c90e460.jpg_560xaf.jpg',
-    sourceUrl: 'http://2606055040.p.make.dcloud.portal1.portal.thefastmake.com/ershouche/dazhongTayron2022kuan280TSIliangquhaohuaban.html',
   },
   {
     id: 'mazda-3-axela-2022',
@@ -51,7 +50,6 @@ export const CARS: Car[] = [
     trim: '2.0L 自动质睿版',
     priceCny: 99700,
     image: 'https://omo-oss-image.thefastimg.com/portal-saas/pg2026060513424661000/cms/image/d3007841-2665-4196-a284-6b0e1dc62981.jpg_560xaf.jpg',
-    sourceUrl: 'http://2606055040.p.make.dcloud.portal1.portal.thefastmake.com/ershouche/mazida3Axela2022kuan2.0Lzidongzhiruiban.html',
   },
   {
     id: 'toyota-corolla-2021',
@@ -62,7 +60,6 @@ export const CARS: Car[] = [
     trim: 'TNGA 1.5L CVT 精英版',
     priceCny: 79700,
     image: 'https://omo-oss-image.thefastimg.com/portal-saas/pg2026060513424661000/cms/image/a7489565-d1de-457e-8268-159f5f6a4542.jpg_560xaf.jpg',
-    sourceUrl: 'http://2606055040.p.make.dcloud.portal1.portal.thefastmake.com/ershouche/fengtianCorolla2021kuanTNGA1.5LCVTjingyingban.html',
   },
 ];
 

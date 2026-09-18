@@ -1,31 +1,5 @@
-export default function Footer() {
-  return (
-    <>
-      <section className="info-band" id="about">
-        <div className="container info-grid">
-          <div>
-            <p className="section-kicker" style={{ color: '#8edbd4' }}>Почему BINHAI</p>
-            <h2>Не просто купить авто.<br />Привезти его правильно.</h2>
-            <p>Берём на себя проверку автомобиля, переговоры с продавцом, подготовку документов и логистику. Вы получаете понятный процесс и одного ответственного партнёра.</p>
-          </div>
-          <div className="info-stat-grid">
-            <div className="info-stat"><strong>01</strong><span>Подбор и проверка</span></div>
-            <div className="info-stat"><strong>02</strong><span>Сделка и документы</span></div>
-            <div className="info-stat"><strong>03</strong><span>Доставка в Россию</span></div>
-            <div className="info-stat"><strong>04</strong><span>Поддержка до получения</span></div>
-          </div>
-        </div>
-      </section>
-      <footer className="site-footer" id="contacts">
-        <div className="container">
-          <div className="footer-grid">
-            <div><h3>BINHAI AUTO</h3><p>黑龙江滨海国际汽车进出口有限公司</p><p>Международный экспорт автомобилей из Китая для частных клиентов и бизнеса.</p></div>
-            <div><h3>Связаться</h3><ul><li><a href="https://t.me/binhai_bot">Telegram: @binhai_bot</a></li><li>WhatsApp: +86 158 4019 9999</li><li>WeChat: 13766611716</li><li><a href="mailto:576909777@qq.com">576909777@qq.com</a></li></ul></div>
-            <div><h3>我们的口号</h3><p>宾客溢四海，贸易连全球</p><p>Гости со всего мира — торговля по всему миру</p></div>
-          </div>
-          <div className="footer-bottom"><span>© 2026 BINHAI AUTO</span><span>Автомобили из Китая под ключ</span></div>
-        </div>
-      </footer>
-    </>
-  );
+import { SiteContacts, whatsappUrl } from '../data/siteSettings';
+
+export default function Footer({ contacts }: { contacts: SiteContacts }) {
+  return <><section className="process-section" id="process"><div className="container"><div className="process-intro"><p className="eyebrow eyebrow-dark">ПОЧЕМУ BINHAI</p><h2>Путь автомобиля<br /><em>от выбора до вас.</em></h2><p>Один ответственный партнёр на всём маршруте. Помогаем выбрать автомобиль, проверить его состояние и организовать доставку.</p></div><div className="process-grid"><div><b>01</b><h3>Подбор</h3><p>Находим автомобиль под ваш бюджет и задачу.</p></div><div><b>02</b><h3>Проверка</h3><p>Показываем фото, характеристики и состояние.</p></div><div><b>03</b><h3>Оформление</h3><p>Согласовываем условия и документы сделки.</p></div><div><b>04</b><h3>Доставка</h3><p>Организуем путь автомобиля до Уссурийска.</p></div></div></div></section><footer className="site-footer" id="contacts"><div className="container"><div className="footer-top"><div><a className="footer-logo" href="#top">BINHAI AUTO</a><p>Автомобили из Китая<br />с доставкой до Уссурийска.</p></div><div><p className="footer-label">Связаться</p><ul><li><a href={contacts.telegram} target="_blank" rel="noreferrer">Telegram ↗</a></li><li><a href={whatsappUrl(contacts.whatsapp)} target="_blank" rel="noreferrer">WhatsApp ↗</a></li><li>WeChat: {contacts.wechat}</li><li><a href={`mailto:${contacts.email}`}>{contacts.email}</a></li></ul></div><div><p className="footer-label">BINHAI AUTO</p><p>{contacts.address}</p><p>Подбор, проверка<br />и международная доставка.</p></div></div><div className="footer-bottom"><span>© 2026 BINHAI AUTO</span><span>China → Russia · Ussuriysk</span></div></div></footer></>;
 }
