@@ -153,7 +153,7 @@ export function englishBrand(brand: string, brandZh?: string): string {
     const normalized = candidate.trim().toLowerCase();
     if (ENGLISH_BRANDS[normalized]) return ENGLISH_BRANDS[normalized];
   }
-  return brand
+  return transliterateCyrillic(brand
     .replace(/хавал|хавей/gi, 'Haval')
     .replace(/шевроле/gi, 'Chevrolet')
     .replace(/пежо/gi, 'Peugeot')
@@ -164,7 +164,7 @@ export function englishBrand(brand: string, brandZh?: string): string {
     .replace(/ниссан/gi, 'Nissan')
     .replace(/хендай/gi, 'Hyundai')
     .replace(/киа/gi, 'Kia')
-    .trim();
+    .trim());
 }
 
 const MODEL_REPLACEMENTS: Array<[RegExp, string]> = [
@@ -178,7 +178,12 @@ const MODEL_REPLACEMENTS: Array<[RegExp, string]> = [
   [/шкода/gi, 'Skoda'],
   [/рапид/gi, 'Rapid'],
   [/аксела/gi, 'Axela'],
+  [/сильфи/gi, 'Sylphy'],
   [/силфи/gi, 'Sylphy'],
+  [/кх1/gi, 'KX1'],
+  [/эмгранд/gi, 'Emgrand'],
+  [/джетта/gi, 'Jetta'],
+  [/тиго/gi, 'Tiggo'],
   [/левин/gi, 'Levin'],
   [/синъяо/gi, 'Xinyao'],
   [/двойной\s+гибрид/gi, 'Dual Hybrid'],
@@ -187,8 +192,17 @@ const MODEL_REPLACEMENTS: Array<[RegExp, string]> = [
   [/\s*,?\s*модель\s*/gi, ' '],
 ];
 
+const RU_LATIN: Record<string, string> = {
+  а:'a', б:'b', в:'v', г:'g', д:'d', е:'e', ё:'yo', ж:'zh', з:'z', и:'i', й:'y', к:'k', л:'l', м:'m', н:'n', о:'o', п:'p', р:'r', с:'s', т:'t', у:'u', ф:'f', х:'kh', ц:'ts', ч:'ch', ш:'sh', щ:'shch', ъ:'', ы:'y', ь:'', э:'e', ю:'yu', я:'ya',
+};
+
+function transliterateCyrillic(value: string): string {
+  return value.split('').map((char) => RU_LATIN[char.toLowerCase()] ? RU_LATIN[char.toLowerCase()] : char).join('');
+}
+
 export function englishModel(model: string): string {
-  return MODEL_REPLACEMENTS.reduce((result, [pattern, replacement]) => result.replace(pattern, replacement), model).replace(/\s+/g, ' ').trim();
+  const replaced = MODEL_REPLACEMENTS.reduce((result, [pattern, replacement]) => result.replace(pattern, replacement), model).replace(/\s+/g, ' ').trim();
+  return transliterateCyrillic(replaced);
 }
 
 export const SYNC_META = {
