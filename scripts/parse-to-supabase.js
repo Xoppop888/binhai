@@ -46,6 +46,7 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { createClient } from '@supabase/supabase-js';
 import { chromium } from 'playwright';
+import { detectFuelType } from './detectFuelType.js';
 
 const SITE = 'https://www.bhgjauto.com';
 const LISTINGS = [
@@ -367,6 +368,14 @@ async function main() {
     const { brand, model, year, trim } = splitTitle(detail.title);
     const slug = `${slugify(brand)}-${slugify(model)}-${detail.sourceId || i}`;
 
+    // Тип силовой установки парсер сам не знает — эвристика по названию/
+    // описанию, финальную проверку делает человек в /admin.
+    const { fuelType } = detectFuelType({
+      title: detail.title,
+      description: detail.description,
+      engine_volume: detail.engineVolume,
+    });
+
     const row = {
       slug,
       source_id: detail.sourceId,
@@ -391,6 +400,7 @@ async function main() {
       keys_count: detail.keysCount,
       body_condition: detail.bodyCondition,
       insurance_until: detail.insuranceUntil,
+      fuel_type: fuelType,
     };
 
     results.push(row);
