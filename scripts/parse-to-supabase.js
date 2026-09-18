@@ -349,7 +349,23 @@ async function main() {
   const links = await collectDetailLinks();
   console.log(`\n🔗 Всего найдено карточек: ${links.size}`);
 
-  const entries = [...links.entries()].slice(0, LIMIT);
+  // Дедуп по source_id (номер карточки на сайте-источнике) — на случай,
+  // если одна и та же карточка встретилась под чуть разными URL
+  // (с www/без, с доп. параметром и т.п.) и не задедуплицировалась
+  // на этапе сбора ссылок по строке URL.
+  const dedupedLinks = new Map(); // sourceId -> { url, category }
+  for (const [url, category] of links) {
+    const idMatch = url.match(/Products-Details\/(\d+)\.html/);
+    const key = idMatch ? idMatch[1] : url;
+    if (!dedupedLinks.has(key)) {
+      dedupedLinks.set(key, { url, category });
+    }
+  }
+  if (dedupedLinks.size !== links.size) {
+    console.log(`  ⚠️  Убрано дублей по source_id: ${links.size - dedupedLinks.size}`);
+  }
+
+  const entries = [...dedupedLinks.values()].map(({ url, category }) => [url, category]).slice(0, LIMIT);
   const results = [];
   let ok = 0;
   let fail = 0;
@@ -421,7 +437,7 @@ async function main() {
   const chunkSize = 50;
   for (let i = 0; i < results.length; i += chunkSize) {
     const chunk = results.slice(i, i + chunkSize);
-    const { error } = await supabase.from('cars').upsert(chunk, { onConflict: 'slug' });
+    const { error } = await supabase.from('cars').upsert(chunk, { onConflict: 'source_id' });
     if (error) {
       console.error(`  ❌ Ошибка записи пачки ${i / chunkSize + 1}:`, error.message);
     } else {
