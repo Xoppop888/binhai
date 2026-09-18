@@ -202,7 +202,8 @@ function transliterateCyrillic(value: string): string {
 
 export function englishModel(model: string): string {
   const replaced = MODEL_REPLACEMENTS.reduce((result, [pattern, replacement]) => result.replace(pattern, replacement), model).replace(/\s+/g, ' ').trim();
-  return transliterateCyrillic(replaced);
+  const latin = transliterateCyrillic(replaced);
+  return latin.replace(/^golf$/i, 'Golf').replace(/^sylphy$/i, 'Sylphy').replace(/^rapid$/i, 'Rapid');
 }
 
 export const SYNC_META = {
