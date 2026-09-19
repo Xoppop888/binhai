@@ -323,11 +323,25 @@ function splitTitle(title) {
   return { brand, model, year, trim };
 }
 
+const RU_LATIN = {
+  а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'yo', ж: 'zh', з: 'z', и: 'i',
+  й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't',
+  у: 'u', ф: 'f', х: 'kh', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'shch', ъ: '', ы: 'y',
+  ь: '', э: 'e', ю: 'yu', я: 'ya',
+};
+
+function transliterate(str) {
+  return str.split('').map((ch) => {
+    const lower = ch.toLowerCase();
+    return RU_LATIN[lower] !== undefined ? RU_LATIN[lower] : ch;
+  }).join('');
+}
+
 function slugify(str) {
-  return str
+  return transliterate(str)
     .toLowerCase()
     .replace(/[«»"']/g, '')
-    .replace(/[^a-z0-9а-яё]+/gi, '-')
+    .replace(/[^a-z0-9]+/gi, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 80);
 }
@@ -382,7 +396,7 @@ async function main() {
     }
 
     const { brand, model, year, trim } = splitTitle(detail.title);
-    const slug = `${slugify(brand)}-${slugify(model)}-${detail.sourceId || i}`;
+    const slug = `${slugify(brand)}-${slugify(model)}-${detail.sourceId || i}`.slice(0, 64).replace(/-+$/, '');
 
     // Тип силовой установки парсер сам не знает — эвристика по названию/
     // описанию, финальную проверку делает человек в /admin.
