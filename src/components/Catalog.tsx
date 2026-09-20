@@ -15,15 +15,6 @@ const SORT_LABELS: Record<SortOption, string> = {
   brand_az: 'Марка: А-Я',
 };
 
-const selectStyle: React.CSSProperties = {
-  padding: '10px 14px',
-  borderRadius: 8,
-  border: '1px solid #d8dee1',
-  background: '#fff',
-  fontSize: 14,
-  minWidth: 160,
-};
-
 export default function Catalog({ cars, source }: CatalogProps) {
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
   const [page, setPage] = useState(1);
@@ -77,16 +68,16 @@ export default function Catalog({ cars, source }: CatalogProps) {
   return <section className="catalog-section" id="catalog"><div className="container">
     <div className="catalog-heading"><div><p className="eyebrow eyebrow-dark">ВЫБОР BINHAI</p><h2>Автомобили в наличии</h2><p className="catalog-subtitle">Реальные автомобили с доставкой по России. В карточке указана стоимость конкретного маршрута до Уссурийска.</p></div><div className="catalog-count"><strong>{filtered.length}</strong><span>автомобилей<br />в каталоге</span></div></div>
     <div className="catalog-toolbar"><div className="filter-tabs"><button className={filter === 'all' ? 'active' : ''} onClick={() => changeFilter('all')}>Все автомобили</button><button className={filter === 'new' ? 'active' : ''} onClick={() => changeFilter('new')}>Новые</button><button className={filter === 'used' ? 'active' : ''} onClick={() => changeFilter('used')}>С пробегом</button></div><span className="catalog-live"><i /> {source === 'supabase' ? 'Каталог обновлён' : 'Каталог доступен'}</span></div>
-    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', margin: '16px 0 24px' }}>
-      <select style={selectStyle} value={brandFilter} onChange={(e) => changeBrand(e.target.value)} aria-label="Марка">
+    <div className="catalog-filters">
+      <select value={brandFilter} onChange={(e) => changeBrand(e.target.value)} aria-label="Марка">
         <option value="all">Все марки</option>
         {brandOptions.map((brand) => <option key={brand} value={brand}>{brand}</option>)}
       </select>
-      <select style={selectStyle} value={modelFilter} onChange={(e) => changeModel(e.target.value)} aria-label="Модель">
+      <select value={modelFilter} onChange={(e) => changeModel(e.target.value)} aria-label="Модель">
         <option value="all">Все модели</option>
         {modelOptions.map((model) => <option key={model} value={model}>{model}</option>)}
       </select>
-      <select style={selectStyle} value={sort} onChange={(e) => changeSort(e.target.value as SortOption)} aria-label="Сортировка">
+      <select value={sort} onChange={(e) => changeSort(e.target.value as SortOption)} aria-label="Сортировка">
         {(Object.keys(SORT_LABELS) as SortOption[]).map((key) => <option key={key} value={key}>{SORT_LABELS[key]}</option>)}
       </select>
       {(brandFilter !== 'all' || modelFilter !== 'all') && <button className="page-button" onClick={() => { changeBrand('all'); }}>✕ Сбросить марку/модель</button>}
