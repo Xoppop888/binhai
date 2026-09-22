@@ -102,7 +102,7 @@ export function descriptionFeatures(description?: string): string[] {
 }
 
 const ENGLISH_BRANDS: Record<string, string> = {
-  '大众': 'Volkswagen', volkswagen: 'Volkswagen',
+  '大众': 'Volkswagen', volkswagen: 'Volkswagen', фольксваген: 'Volkswagen',
   '马自达': 'Mazda', mazda: 'Mazda', мазда: 'Mazda',
   '丰田': 'Toyota', toyota: 'Toyota', тойота: 'Toyota',
   '本田': 'Honda', honda: 'Honda', хонда: 'Honda',
@@ -164,6 +164,18 @@ export function englishBrand(brand: string, brandZh?: string): string {
     .replace(/ниссан/gi, 'Nissan')
     .replace(/хендай/gi, 'Hyundai')
     .replace(/киа/gi, 'Kia')
+    .replace(/фольксваген/gi, 'Volkswagen')
+    .replace(/мерседес/gi, 'Mercedes-Benz')
+    .replace(/ауди/gi, 'Audi')
+    .replace(/бмв/gi, 'BMW')
+    .replace(/бьюик/gi, 'Buick')
+    .replace(/чери/gi, 'Chery')
+    .replace(/джили/gi, 'Geely')
+    .replace(/мицубиси|митсубиси/gi, 'Mitsubishi')
+    .replace(/бэйцзин|пекинск(ий|ая)/gi, 'Beijing')
+    .replace(/гуанчжоу/gi, 'Guangzhou')
+    .replace(/чуаньци/gi, 'Trumpchi')
+    .replace(/гавчи/gi, 'GAC')
     .trim());
 }
 
@@ -197,7 +209,10 @@ const RU_LATIN: Record<string, string> = {
 };
 
 function transliterateCyrillic(value: string): string {
-  return value.split('').map((char) => RU_LATIN[char.toLowerCase()] ? RU_LATIN[char.toLowerCase()] : char).join('');
+  return value.split('').map((char) => {
+    const lower = char.toLowerCase();
+    return RU_LATIN[lower] !== undefined ? RU_LATIN[lower] : char;
+  }).join('');
 }
 
 export function englishModel(model: string): string {
