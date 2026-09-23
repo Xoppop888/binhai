@@ -459,6 +459,47 @@ async function main() {
     }
   }
 
+  console.log('\n✅ Запись завершена.');
+
+  // ------------------------------------------------------------------
+  // Очистка: убираем из Supabase машины, которых больше нет на сайте-
+  // источнике (проданы/сняты с продажи). Без этого база только растёт,
+  // а сайт продолжает показывать давно проданные машины.
+  //
+  // ВАЖНО: пропускаем этот шаг при LIMIT (пробный/частичный прогон) —
+  // иначе мы бы удалили все машины, которые просто не попали в
+  // урезанную выборку этого запуска, хотя на сайте они всё ещё есть.
+  // ------------------------------------------------------------------
+  if (LIMIT !== Infinity) {
+    console.log('\n⚠️  LIMIT задан — пропускаю очистку пропавших машин (частичный прогон).');
+  } else {
+    console.log('\n🧹 Проверяю, какие машины пропали с сайта-источника...');
+
+    const currentSourceIds = new Set(results.map((r) => r.source_id).filter(Boolean));
+
+    const { data: existing, error: fetchError } = await supabase.from('cars').select('id, source_id, brand, model');
+
+    if (fetchError) {
+      console.error('  ❌ Не удалось получить список машин для очистки:', fetchError.message);
+    } else {
+      const toDelete = (existing || []).filter((row) => row.source_id && !currentSourceIds.has(row.source_id));
+
+      if (toDelete.length === 0) {
+        console.log('  Пропавших машин не найдено.');
+      } else {
+        console.log(`  Найдено пропавших: ${toDelete.length}. Удаляю...`);
+        for (const row of toDelete) {
+          const { error: deleteError } = await supabase.from('cars').delete().eq('id', row.id);
+          if (deleteError) {
+            console.error(`    ❌ ${row.brand} ${row.model} (id ${row.id}): ${deleteError.message}`);
+          } else {
+            console.log(`    🗑️  Удалено: ${row.brand} ${row.model}`);
+          }
+        }
+      }
+    }
+  }
+
   console.log('\n✅ Готово.');
 }
 
