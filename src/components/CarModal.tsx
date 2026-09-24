@@ -1,14 +1,34 @@
 import { useRef, useState } from 'react';
 import { Car, descriptionFeatures, englishBrand, englishModel, formatCny } from '../data/cars';
+import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
+import {
+  calculateTurnkeyPrice,
+  fetchCbrRatesForBrowser,
+  estimateVtbCnyRate,
+  parseEngineVolumeCm3,
+  type CalculationResult,
+  type CalculationNeedsData,
+  type FuelType,
+} from '../lib/siteCustomsCalculator';
 
 interface CarModalProps { car: Car; onClose: () => void; }
 const SPEC_LABELS: Record<string, string> = { vin: 'VIN / номер кузова', color: 'Цвет', driveType: 'Привод', releaseDate: 'Дата выпуска', mileageKm: 'Пробег', engineVolume: 'Объём двигателя', keysCount: 'Ключи', bodyCondition: 'Состояние кузова', insuranceUntil: 'Страховка ОСАГО' };
+
+function fmtRub(n: number): string {
+  return Math.round(n).toLocaleString('ru-RU') + ' ₽';
+}
 
 export default function CarModal({ car, onClose }: CarModalProps) {
   const images = car.images?.length ? car.images : [car.image];
   const [activeImage, setActiveImage] = useState(0);
   const thumbsRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
+
+  const [calcStatus, setCalcStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+  const [calcResult, setCalcResult] = useState<CalculationResult | CalculationNeedsData | null>(null);
+  const [leadName, setLeadName] = useState('');
+  const [leadPhone, setLeadPhone] = useState('');
+  const [leadStatus, setLeadStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
   function goTo(index: number) {
     const next = (index + images.length) % images.length;
@@ -17,7 +37,6 @@ export default function CarModal({ car, onClose }: CarModalProps) {
   function goPrev() { goTo(activeImage - 1); }
   function goNext() { goTo(activeImage + 1); }
 
-  // Свайп пальцем по главному фото на мобильном
   function onTouchStart(e: React.TouchEvent) { touchStartX.current = e.touches[0].clientX; }
   function onTouchEnd(e: React.TouchEvent) {
     if (touchStartX.current == null) return;
@@ -26,12 +45,53 @@ export default function CarModal({ car, onClose }: CarModalProps) {
     touchStartX.current = null;
   }
 
-  // Обычное колесо мыши крутит полосу миниатюр по горизонтали (иначе на
-  // десктопе её тяжело скроллить — только через узкий скроллбар или Shift+колесо)
   function onThumbsWheel(e: React.WheelEvent) {
     if (!thumbsRef.current) return;
     e.preventDefault();
     thumbsRef.current.scrollLeft += e.deltaY;
+  }
+
+  async function runCalculation() {
+    setCalcStatus('loading');
+    try {
+      const { eur, cny } = await fetchCbrRatesForBrowser();
+      const cnyToRub = estimateVtbCnyRate(cny);
+      const result = calculateTurnkeyPrice(
+        {
+          priceCny: car.priceCny,
+          ageYears: Math.max(0, new Date().getFullYear() - (car.year || new Date().getFullYear())),
+          fuelType: (car.fuelType as FuelType) || 'unknown',
+          engineVolumeCm3: parseEngineVolumeCm3(car.engineVolume),
+          powerHp: car.powerHp ?? null,
+          batteryKwh: car.batteryKwh ?? null,
+        },
+        { cnyToRub, eurToRub: eur },
+      );
+      setCalcResult(result);
+      setCalcStatus('done');
+    } catch {
+      setCalcStatus('error');
+    }
+  }
+
+  async function submitLead() {
+    if (!supabase || !leadPhone.trim()) return;
+    setLeadStatus('sending');
+
+    const carTitle = `${englishBrand(car.brand, car.brandZh)} ${englishModel(car.model)}${car.year ? `, ${car.year}` : ''}`;
+    const isCalculated = calcResult?.ok === true;
+
+    const { error } = await supabase.from('leads').insert({
+      car_title: carTitle,
+      status: isCalculated ? 'calculated' : 'manual_review',
+      total_rub: isCalculated ? (calcResult as CalculationResult).totalRub : null,
+      reason: !isCalculated && calcResult ? (calcResult as CalculationNeedsData).reason : null,
+      source: 'web',
+      contact_name: leadName.trim() || null,
+      contact_phone: leadPhone.trim(),
+    });
+
+    setLeadStatus(error ? 'error' : 'sent');
   }
 
   const specRows: [string, string][] = [];
@@ -63,7 +123,58 @@ export default function CarModal({ car, onClose }: CarModalProps) {
         <div style={{ marginTop: 20, color: '#7a878d', fontSize: 12 }}>Стоимость с доставкой до Уссурийска</div><div className="modal-price">{formatCny(car.priceCny)}</div>
         {specRows.length > 0 && <dl className="spec-grid">{specRows.map(([label, value]) => <div className="spec-row" key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>}
         {features.length > 0 && <div style={{ marginTop: 26 }}><h4 style={{ margin: '0 0 12px', fontFamily: 'Manrope, sans-serif' }}>Комплектация автомобиля</h4><ul className="feature-list">{features.map((feature) => <li key={feature}>✓ {feature}</li>)}</ul></div>}
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 24, flexWrap: 'wrap' }}><a className="button-primary" href={`https://t.me/Binhaiauto_bot?start=${car.id}`} target="_blank" rel="noreferrer">Рассчитать стоимость ↗</a></div>
+
+        {/* Расчёт стоимости под ключ прямо на сайте */}
+        <div style={{ marginTop: 26, padding: 18, background: '#f6f9f8', borderRadius: 10 }}>
+          {calcStatus === 'idle' && <button className="button-primary" onClick={runCalculation}>Рассчитать стоимость под ключ</button>}
+
+          {calcStatus === 'loading' && <p style={{ margin: 0, color: '#7a878d' }}>Считаю по актуальному курсу ЦБ...</p>}
+
+          {calcStatus === 'error' && <>
+            <p style={{ margin: '0 0 10px', color: '#b44a4a' }}>Не удалось получить курс валют. Попробуйте ещё раз чуть позже.</p>
+            <button className="page-button" onClick={runCalculation}>Повторить</button>
+          </>}
+
+          {calcStatus === 'done' && calcResult && (
+            <>
+              {calcResult.ok ? (
+                <div>
+                  <h4 style={{ margin: '0 0 12px', fontFamily: 'Manrope, sans-serif' }}>Расчёт под ключ</h4>
+                  <dl className="spec-grid">
+                    <div className="spec-row"><dt>Цена авто</dt><dd>{fmtRub(calcResult.breakdown.carPriceRub)}</dd></div>
+                    <div className="spec-row"><dt>Комиссия банка за инвойс</dt><dd>{fmtRub(calcResult.breakdown.bankCommissionRub)}</dd></div>
+                    <div className="spec-row"><dt>Таможенная пошлина</dt><dd>{fmtRub(calcResult.breakdown.customsDutyRub)}</dd></div>
+                    <div className="spec-row"><dt>Утильсбор</dt><dd>{fmtRub(calcResult.breakdown.utilizationFeeRub)}</dd></div>
+                    <div className="spec-row"><dt>Сборы (оформление + СБКТС + ЭПТС)</dt><dd>{fmtRub(calcResult.breakdown.declarationFeeRub + calcResult.breakdown.sbktsRub + calcResult.breakdown.eptsRub)}</dd></div>
+                    <div className="spec-row"><dt>Услуги брокера</dt><dd>{fmtRub(calcResult.breakdown.brokerFeeRub)}</dd></div>
+                  </dl>
+                  <div className="modal-price" style={{ marginTop: 14 }}>Итого: {fmtRub(calcResult.totalRub)}</div>
+                  <p style={{ fontSize: 11, color: '#94a0a2', marginTop: 8 }}>{calcResult.disclaimer}</p>
+                </div>
+              ) : (
+                <p style={{ margin: 0, color: '#88613a' }}>Не могу посчитать автоматически: {calcResult.reason}. Оставьте контакт ниже — менеджер посчитает вручную.</p>
+              )}
+
+              {/* Форма заявки — доступна и после успешного расчёта, и когда нужна ручная проверка */}
+              {isSupabaseConfigured && leadStatus !== 'sent' && (
+                <div style={{ marginTop: 18, paddingTop: 18, borderTop: '1px solid #e4ecea' }}>
+                  <h4 style={{ margin: '0 0 12px', fontFamily: 'Manrope, sans-serif' }}>Оставить заявку на эту машину</h4>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <input placeholder="Имя" value={leadName} onChange={(e) => setLeadName(e.target.value)} style={{ flex: '1 1 160px', padding: 10, borderRadius: 6, border: '1px solid #d6e1de' }} />
+                    <input placeholder="Телефон*" value={leadPhone} onChange={(e) => setLeadPhone(e.target.value)} style={{ flex: '1 1 160px', padding: 10, borderRadius: 6, border: '1px solid #d6e1de' }} />
+                  </div>
+                  <button className="button-primary" style={{ marginTop: 12 }} onClick={submitLead} disabled={!leadPhone.trim() || leadStatus === 'sending'}>
+                    {leadStatus === 'sending' ? 'Отправляю...' : 'Отправить заявку'}
+                  </button>
+                  {leadStatus === 'error' && <p style={{ color: '#b44a4a', fontSize: 12, marginTop: 8 }}>Не удалось отправить, попробуйте ещё раз.</p>}
+                </div>
+              )}
+              {leadStatus === 'sent' && <p style={{ marginTop: 18, color: '#226c63', fontWeight: 700 }}>Спасибо! Заявка отправлена, менеджер свяжется с вами.</p>}
+            </>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 24, flexWrap: 'wrap' }}><a className="button-ghost" style={{ color: '#0d6470', border: '1px solid #0d6470' }} href={`https://t.me/Binhaiauto_bot?start=${car.id}`} target="_blank" rel="noreferrer">Или через Telegram-бота ↗</a></div>
       </div>
     </div>
   </div>;

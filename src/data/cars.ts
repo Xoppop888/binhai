@@ -25,6 +25,9 @@ export interface Car {
   keysCount?: string;
   bodyCondition?: string;
   insuranceUntil?: string;
+  fuelType?: string;
+  powerHp?: number;
+  batteryKwh?: number;
 }
 
 /* ------------------------------------------------------------------
@@ -322,5 +325,8 @@ function mapSupabaseRowToCar(row: any): Car {
     keysCount: row.keys_count || undefined,
     bodyCondition: row.body_condition || undefined,
     insuranceUntil: row.insurance_until || undefined,
+    fuelType: row.fuel_type || undefined,
+    powerHp: row.power_hp ?? undefined,
+    batteryKwh: row.battery_kwh ?? undefined,
   };
 }
