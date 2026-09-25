@@ -300,9 +300,10 @@ COPY --from=build /app/dist /usr/share/nginx/html
 ## 🤝 Поддержка
 
 При возникновении вопросов:
-- **Email**: 576909777@qq.com
-- **Telegram**: @binhai_bot
-- **WhatsApp**: +86 158 4019 9999
+- **WhatsApp**: +7 914 070-80-06
+- **WeChat**: Arkady_lee
+- **Email**: binhaiexport@gmail.com
+- **Telegram**: @binhaiauto_ru
 
 ---
 
