@@ -23,14 +23,12 @@ export default function Catalog({ cars, source }: CatalogProps) {
   const [modelFilter, setModelFilter] = useState<string>('all');
   const [sort, setSort] = useState<SortOption>('price_asc');
 
-  // Список марок — с человеческим (английским) названием, отсортирован А-Я
   const brandOptions = useMemo(() => {
     const set = new Set<string>();
     cars.forEach((car) => set.add(englishBrand(car.brand, car.brandZh)));
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [cars]);
 
-  // Список моделей зависит от выбранной марки
   const modelOptions = useMemo(() => {
     const set = new Set<string>();
     cars.forEach((car) => {
@@ -82,7 +80,17 @@ export default function Catalog({ cars, source }: CatalogProps) {
       </select>
       {(brandFilter !== 'all' || modelFilter !== 'all') && <button className="page-button" onClick={() => { changeBrand('all'); }}>✕ Сбросить марку/модель</button>}
     </div>
-    <div className="car-grid-v2">{visibleCars.map((car) => { const brand = englishBrand(car.brand, car.brandZh); const model = englishModel(car.model); return <article className="car-card-v2" key={car.id} onClick={() => setSelectedCar(car)} style={{ cursor: 'pointer' }}><button className="car-visual" onClick={(e) => { e.stopPropagation(); setSelectedCar(car); }} aria-label={`Открыть ${brand} ${model}`}><img src={car.image} alt={`${brand} ${model}`} /><span className="car-condition">{car.category === 'new' ? 'NEW' : 'VERIFIED'}</span><span className="car-year">{car.year || '—'}</span></button><div className="car-card-content"><p className="car-brand-v2">{brand}</p><h3>{model}</h3><p className="car-trim-v2">{car.engineVolume || 'Engine'} <span>·</span> {car.driveType || 'Drive'} <span>·</span> {car.mileageKm ? `${car.mileageKm.toLocaleString('ru-RU')} km` : 'Mileage on request'}</p><div className="car-card-footer"><div><small>С доставкой до Уссурийска</small><strong>{formatCny(car.priceCny)}</strong></div><button className="card-arrow" onClick={(e) => { e.stopPropagation(); setSelectedCar(car); }}>↗</button></div></div></article>; })}</div>
+    <div className="car-grid-v2">{visibleCars.map((car) => {
+      const brand = englishBrand(car.brand, car.brandZh);
+      const model = englishModel(car.model);
+      return <article className="car-card-v2" key={car.id} onClick={() => setSelectedCar(car)} style={{ cursor: 'pointer' }}>
+        <button className="car-visual" onClick={(e) => { e.stopPropagation(); setSelectedCar(car); }} aria-label={`Открыть ${brand} ${model}`}>
+          <img src={car.image} alt={`${brand} ${model}`} loading="lazy" decoding="async" />
+          <span className="car-condition">{car.category === 'new' ? 'NEW' : 'VERIFIED'}</span><span className="car-year">{car.year || '—'}</span>
+        </button>
+        <div className="car-card-content"><p className="car-brand-v2">{brand}</p><h3>{model}</h3><p className="car-trim-v2">{car.engineVolume || 'Engine'} <span>·</span> {car.driveType || 'Drive'} <span>·</span> {car.mileageKm ? `${car.mileageKm.toLocaleString('ru-RU')} km` : 'Mileage on request'}</p><div className="car-card-footer"><div><small>С доставкой до Уссурийска</small><strong>{formatCny(car.priceCny)}</strong></div><button className="card-arrow" onClick={(e) => { e.stopPropagation(); setSelectedCar(car); }}>↗</button></div></div>
+      </article>;
+    })}</div>
     {visibleCars.length === 0 && <div className="empty-state"><h3>Автомобили не найдены</h3><p>Попробуйте выбрать другой фильтр.</p></div>}
     {pageCount > 1 && <div className="pagination-v2"><button className="page-button" disabled={page === 1} onClick={() => { setPage((v) => v - 1); scrollCatalog(); }}>← Назад</button><span><b>{page}</b> / {pageCount}</span><button className="page-button" disabled={page === pageCount} onClick={() => { setPage((v) => v + 1); scrollCatalog(); }}>Вперёд →</button></div>}
   </div>{selectedCar && <CarModal car={selectedCar} onClose={() => setSelectedCar(null)} />}</section>;

@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabaseClient';
+import { isPublicSupabaseConfigured, publicSupabaseFetch } from '../lib/publicSupabase';
 
 export interface SiteContacts {
   telegram: string;
@@ -17,16 +17,17 @@ export const DEFAULT_CONTACTS: SiteContacts = {
 };
 
 export async function loadContacts(): Promise<SiteContacts> {
-  if (!supabase) return DEFAULT_CONTACTS;
-  const { data, error } = await supabase.from('site_settings').select('contacts').eq('id', 'main').maybeSingle();
-  if (error || !data?.contacts) return DEFAULT_CONTACTS;
-  return { ...DEFAULT_CONTACTS, ...(data.contacts as Partial<SiteContacts>) };
-}
+  if (!isPublicSupabaseConfigured()) return DEFAULT_CONTACTS;
 
-export async function saveContacts(contacts: SiteContacts): Promise<string | null> {
-  if (!supabase) return 'Supabase не настроен';
-  const { error } = await supabase.from('site_settings').upsert({ id: 'main', contacts, updated_at: new Date().toISOString() });
-  return error?.message ?? null;
+  try {
+    const response = await publicSupabaseFetch('/site_settings?select=contacts&id=eq.main');
+    if (!response.ok) return DEFAULT_CONTACTS;
+
+    const rows = await response.json() as Array<{ contacts?: Partial<SiteContacts> }>;
+    return rows[0]?.contacts ? { ...DEFAULT_CONTACTS, ...rows[0].contacts } : DEFAULT_CONTACTS;
+  } catch {
+    return DEFAULT_CONTACTS;
+  }
 }
 
 export function whatsappUrl(phone: string): string {

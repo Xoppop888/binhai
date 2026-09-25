@@ -1,7 +1,9 @@
+import { isPublicSupabaseConfigured, publicSupabaseFetch } from '../lib/publicSupabase';
+
 export interface Car {
-  id: string;
-  brand: string;
-  brandZh: string;
+id: string;
+brand: string;
+brandZh: string;
   model: string;
   year: number;
   trim: string;
@@ -238,18 +240,12 @@ export const SYNC_META = {
 export async function loadCars(): Promise<{ cars: Car[]; syncedAt: string; fromApi: boolean; source: string }> {
   // Сначала обращаемся к Supabase. Это важно: старый localStorage-кэш
   // не должен скрывать новые записи после запуска парсера.
-  const url = import.meta.env.VITE_SUPABASE_URL;
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-  if (url && key) {
+  if (isPublicSupabaseConfigured()) {
     try {
-      const res = await fetch(`${url}/rest/v1/cars?select=*&order=price_cny.asc`, {
+      const res = await publicSupabaseFetch('/cars?select=*&order=price_cny.asc', {
         // select=* уже включает новые колонки (images, specs, description, ...)
-        headers: { 
-          apikey: key, 
-          Authorization: `Bearer ${key}`,
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
       });
       
       if (res.ok) {
