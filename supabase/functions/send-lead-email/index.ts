@@ -51,7 +51,7 @@ Deno.serve(async (request) => {
   }
 
   if (!/^\+7\s?\(?9\d{2}\)?[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}$/.test(payload.contactPhone.trim())) {
-    return Response.json({ error: 'contactPhone must be a valid Russian mobile number in +7 format' }, { status: 400, headers: corsHeaders });
+    return Response.json({ error: 'contactPhone must be a valid mobile number in +7 format' }, { status: 400, headers: corsHeaders });
   }
 
   const name = payload.contactName?.trim() || 'Не указано';

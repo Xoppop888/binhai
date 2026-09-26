@@ -188,7 +188,7 @@ export default function CarModal({ car, onClose }: CarModalProps) {
                     <input placeholder="Имя" value={leadName} onChange={(e) => setLeadName(e.target.value)} style={{ flex: '1 1 160px', padding: 10, borderRadius: 6, border: '1px solid #d6e1de' }} />
                     <input type="tel" inputMode="tel" placeholder="Телефон* +7 999 123-45-67" value={leadPhone} onChange={(e) => setLeadPhone(e.target.value)} aria-invalid={leadPhone.length > 0 && !isRussianPhone(leadPhone)} style={{ flex: '1 1 220px', padding: 10, borderRadius: 6, border: `1px solid ${leadPhone.length > 0 && !isRussianPhone(leadPhone) ? '#b44a4a' : '#d6e1de'}` }} />
                   </div>
-                  {leadPhone.length > 0 && !isRussianPhone(leadPhone) && <p style={{ color: '#b44a4a', fontSize: 12, margin: '8px 0 0' }}>Введите российский номер в формате +7 999 123-45-67.</p>}
+                  {leadPhone.length > 0 && !isRussianPhone(leadPhone) && <p style={{ color: '#b44a4a', fontSize: 12, margin: '8px 0 0' }}>Введите номер в формате +7 999 123-45-67.</p>}
                   {car.vin && <p style={{ color: '#7a878d', fontSize: 12, margin: '8px 0 0' }}>VIN автомобиля будет отправлен менеджеру: {car.vin}</p>}
                   <button className="button-primary" style={{ marginTop: 12 }} onClick={submitLead} disabled={!isRussianPhone(leadPhone) || leadStatus === 'sending'}>
                     {leadStatus === 'sending' ? 'Отправляю...' : 'Отправить заявку'}
