@@ -103,6 +103,23 @@ export default function CarModal({ car, onClose }: CarModalProps) {
 
     const carTitle = `${englishBrand(car.brand, car.brandZh)} ${englishModel(car.model)}${car.year ? `, ${car.year}` : ''}`;
     const isCalculated = calcResult?.ok === true;
+    const calculationDetails = isCalculated ? {
+      version: 1,
+      input: {
+        priceCny: car.priceCny,
+        modelYear: car.year,
+        releaseDate: car.releaseDate ?? null,
+        fuelType: (car.fuelType as FuelType) || 'unknown',
+        engineVolume: car.engineVolume ?? null,
+        engineVolumeCm3: parseEngineVolumeCm3(car.engineVolume),
+        powerHp: car.powerHp ?? null,
+        batteryKwh: car.batteryKwh ?? null,
+      },
+      rates: calcRates,
+      breakdown: (calcResult as CalculationResult).breakdown,
+      totalRub: (calcResult as CalculationResult).totalRub,
+      disclaimer: (calcResult as CalculationResult).disclaimer,
+    } : null;
 
     const { error } = await supabase.from('leads').insert({
       car_title: carTitle,
@@ -113,6 +130,7 @@ export default function CarModal({ car, onClose }: CarModalProps) {
       contact_name: leadName.trim() || null,
       contact_phone: leadPhone.trim(),
       vin: car.vin || null,
+      calculation_details: calculationDetails,
     });
 
     if (error) {
@@ -130,12 +148,12 @@ export default function CarModal({ car, onClose }: CarModalProps) {
         contactName: leadName.trim() || null,
         contactPhone: leadPhone.trim(),
         vin: car.vin || null,
-        calculation: isCalculated ? {
-          breakdown: (calcResult as CalculationResult).breakdown,
-          totalRub: (calcResult as CalculationResult).totalRub,
-          disclaimer: (calcResult as CalculationResult).disclaimer,
-          cnyToRub: calcRates?.cnyToRub ?? null,
-          eurToRub: calcRates?.eurToRub ?? null,
+        calculation: calculationDetails ? {
+          breakdown: calculationDetails.breakdown,
+          totalRub: calculationDetails.totalRub,
+          disclaimer: calculationDetails.disclaimer,
+          cnyToRub: calculationDetails.rates?.cnyToRub ?? null,
+          eurToRub: calculationDetails.rates?.eurToRub ?? null,
         } : null,
       },
     });
