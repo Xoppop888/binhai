@@ -288,10 +288,10 @@ COPY --from=build /app/dist /usr/share/nginx/html
 
 - **Компания**: 黑龙江滨海国际汽车进出口有限公司
 - **Слоган**: 宾客溢四海，贸易连全球 (Гости со всего мира — торговля по всему миру)
-- **WhatsApp**: +86 158 4019 9999
-- **WeChat**: 13766611716
-- **Email**: 576909777@qq.com
-- **Telegram**: @binhai_bot
+- **WhatsApp**: +7 914 070-80-06
+- **WeChat**: Arkady_lee
+- **Email**: binhaiexport@gmail.com
+- **Telegram**: @binhaiauto_ru
 
 ## 📄 Лицензия
 
@@ -300,9 +300,10 @@ COPY --from=build /app/dist /usr/share/nginx/html
 ## 🤝 Поддержка
 
 При возникновении вопросов:
-- **Email**: 576909777@qq.com
-- **Telegram**: @binhai_bot
-- **WhatsApp**: +86 158 4019 9999
+- **WhatsApp**: +7 914 070-80-06
+- **WeChat**: Arkady_lee
+- **Email**: binhaiexport@gmail.com
+- **Telegram**: @binhaiauto_ru
 
 ---
 

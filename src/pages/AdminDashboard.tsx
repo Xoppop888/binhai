@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
-import { DEFAULT_CONTACTS, loadContacts, saveContacts, SiteContacts } from '../data/siteSettings';
+import { DEFAULT_CONTACTS, loadContacts, SiteContacts } from '../data/siteSettings';
+import { saveContacts } from '../lib/adminSettings';
 import { englishBrand, englishModel } from '../data/cars';
 interface CarRow { id:string; brand:string; model:string; year:number; trim:string; price_cny:number; category:string|null; image_url:string; mileage_km:number|null; fuel_type:string|null; power_hp:number|null; battery_kwh:number|null }
 const EMPTY_NEW = { slug:'', brand:'', model:'', year:new Date().getFullYear(), trim:'', price_cny:0, category:'used', image_url:'', mileage_km:null as number|null, fuel_type:'unknown', power_hp:null as number|null, battery_kwh:null as number|null };

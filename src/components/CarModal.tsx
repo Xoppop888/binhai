@@ -91,7 +91,24 @@ export default function CarModal({ car, onClose }: CarModalProps) {
       contact_phone: leadPhone.trim(),
     });
 
-    setLeadStatus(error ? 'error' : 'sent');
+    if (error) {
+      setLeadStatus('error');
+      return;
+    }
+
+    const { error: emailError } = await supabase.functions.invoke('send-lead-email', {
+      body: {
+        carTitle,
+        status: isCalculated ? 'calculated' : 'manual_review',
+        totalRub: isCalculated ? (calcResult as CalculationResult).totalRub : null,
+        reason: !isCalculated && calcResult ? (calcResult as CalculationNeedsData).reason : null,
+        source: 'web',
+        contactName: leadName.trim() || null,
+        contactPhone: leadPhone.trim(),
+      },
+    });
+
+    setLeadStatus(emailError ? 'error' : 'sent');
   }
 
   const specRows: [string, string][] = [];
