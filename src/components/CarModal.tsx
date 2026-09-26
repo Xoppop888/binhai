@@ -30,6 +30,10 @@ export default function CarModal({ car, onClose }: CarModalProps) {
   const [leadPhone, setLeadPhone] = useState('');
   const [leadStatus, setLeadStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
+  function isRussianPhone(value: string): boolean {
+    return /^\+7\s?\(?9\d{2}\)?[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}$/.test(value.trim());
+  }
+
   function goTo(index: number) {
     const next = (index + images.length) % images.length;
     setActiveImage(next);
@@ -77,7 +81,7 @@ export default function CarModal({ car, onClose }: CarModalProps) {
   }
 
   async function submitLead() {
-    if (!supabase || !leadPhone.trim()) return;
+    if (!supabase || !isRussianPhone(leadPhone)) return;
     setLeadStatus('sending');
 
     const carTitle = `${englishBrand(car.brand, car.brandZh)} ${englishModel(car.model)}${car.year ? `, ${car.year}` : ''}`;
@@ -91,6 +95,7 @@ export default function CarModal({ car, onClose }: CarModalProps) {
       source: 'web',
       contact_name: leadName.trim() || null,
       contact_phone: leadPhone.trim(),
+      vin: car.vin || null,
     });
 
     if (error) {
@@ -107,6 +112,7 @@ export default function CarModal({ car, onClose }: CarModalProps) {
         source: 'web',
         contactName: leadName.trim() || null,
         contactPhone: leadPhone.trim(),
+        vin: car.vin || null,
       },
     });
 
@@ -180,9 +186,11 @@ export default function CarModal({ car, onClose }: CarModalProps) {
                   <h4 style={{ margin: '0 0 12px', fontFamily: 'Manrope, sans-serif' }}>Оставить заявку на эту машину</h4>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     <input placeholder="Имя" value={leadName} onChange={(e) => setLeadName(e.target.value)} style={{ flex: '1 1 160px', padding: 10, borderRadius: 6, border: '1px solid #d6e1de' }} />
-                    <input placeholder="Телефон*" value={leadPhone} onChange={(e) => setLeadPhone(e.target.value)} style={{ flex: '1 1 160px', padding: 10, borderRadius: 6, border: '1px solid #d6e1de' }} />
+                    <input type="tel" inputMode="tel" placeholder="Телефон* +7 999 123-45-67" value={leadPhone} onChange={(e) => setLeadPhone(e.target.value)} aria-invalid={leadPhone.length > 0 && !isRussianPhone(leadPhone)} style={{ flex: '1 1 220px', padding: 10, borderRadius: 6, border: `1px solid ${leadPhone.length > 0 && !isRussianPhone(leadPhone) ? '#b44a4a' : '#d6e1de'}` }} />
                   </div>
-                  <button className="button-primary" style={{ marginTop: 12 }} onClick={submitLead} disabled={!leadPhone.trim() || leadStatus === 'sending'}>
+                  {leadPhone.length > 0 && !isRussianPhone(leadPhone) && <p style={{ color: '#b44a4a', fontSize: 12, margin: '8px 0 0' }}>Введите российский номер в формате +7 999 123-45-67.</p>}
+                  {car.vin && <p style={{ color: '#7a878d', fontSize: 12, margin: '8px 0 0' }}>VIN автомобиля будет отправлен менеджеру: {car.vin}</p>}
+                  <button className="button-primary" style={{ marginTop: 12 }} onClick={submitLead} disabled={!isRussianPhone(leadPhone) || leadStatus === 'sending'}>
                     {leadStatus === 'sending' ? 'Отправляю...' : 'Отправить заявку'}
                   </button>
                   {leadStatus === 'error' && <p style={{ color: '#b44a4a', fontSize: 12, marginTop: 8 }}>Не удалось отправить, попробуйте ещё раз.</p>}

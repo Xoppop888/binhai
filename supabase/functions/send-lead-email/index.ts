@@ -11,6 +11,7 @@ interface LeadEmailPayload {
   reason?: string | null;
   contactName?: string | null;
   contactPhone?: string;
+  vin?: string | null;
   source?: string;
 }
 
@@ -49,9 +50,14 @@ Deno.serve(async (request) => {
     return Response.json({ error: 'carTitle and contactPhone are required' }, { status: 400, headers: corsHeaders });
   }
 
+  if (!/^\+7\s?\(?9\d{2}\)?[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}$/.test(payload.contactPhone.trim())) {
+    return Response.json({ error: 'contactPhone must be a valid Russian mobile number in +7 format' }, { status: 400, headers: corsHeaders });
+  }
+
   const name = payload.contactName?.trim() || 'Не указано';
   const phone = payload.contactPhone.trim();
   const carTitle = payload.carTitle.trim();
+  const vin = payload.vin?.trim() || 'Не указан';
   const subject = `Новая заявка BINHAI AUTO: ${carTitle}`;
   const html = `
     <h2>Новая заявка BINHAI AUTO</h2>
@@ -59,6 +65,7 @@ Deno.serve(async (request) => {
       <tr><td><b>Автомобиль</b></td><td>${escapeHtml(carTitle)}</td></tr>
       <tr><td><b>Имя</b></td><td>${escapeHtml(name)}</td></tr>
       <tr><td><b>Телефон</b></td><td>${escapeHtml(phone)}</td></tr>
+      <tr><td><b>VIN</b></td><td>${escapeHtml(vin)}</td></tr>
       <tr><td><b>Статус расчёта</b></td><td>${escapeHtml(payload.status || 'manual_review')}</td></tr>
       <tr><td><b>Итого</b></td><td>${escapeHtml(formatRub(payload.totalRub))}</td></tr>
       <tr><td><b>Комментарий</b></td><td>${escapeHtml(payload.reason || '—')}</td></tr>
