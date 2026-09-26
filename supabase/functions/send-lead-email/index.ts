@@ -13,6 +13,22 @@ interface LeadEmailPayload {
   contactPhone?: string;
   vin?: string | null;
   source?: string;
+  calculation?: {
+    breakdown?: {
+      carPriceRub?: number;
+      bankCommissionRub?: number;
+      customsDutyRub?: number;
+      utilizationFeeRub?: number;
+      declarationFeeRub?: number;
+      sbktsRub?: number;
+      eptsRub?: number;
+      brokerFeeRub?: number;
+    };
+    totalRub?: number | null;
+    disclaimer?: string | null;
+    cnyToRub?: number | null;
+    eurToRub?: number | null;
+  } | null;
 }
 
 function escapeHtml(value: unknown): string {
@@ -26,6 +42,10 @@ function escapeHtml(value: unknown): string {
 
 function formatRub(value: number | null | undefined): string {
   return typeof value === 'number' ? `${Math.round(value).toLocaleString('ru-RU')} ₽` : '—';
+}
+
+function formatRate(value: number | null | undefined): string {
+  return typeof value === 'number' ? value.toLocaleString('ru-RU', { maximumFractionDigits: 4 }) : '—';
 }
 
 Deno.serve(async (request) => {
@@ -58,6 +78,8 @@ Deno.serve(async (request) => {
   const phone = payload.contactPhone.trim();
   const carTitle = payload.carTitle.trim();
   const vin = payload.vin?.trim() || 'Не указан';
+  const calculation = payload.calculation;
+  const breakdown = calculation?.breakdown;
   const subject = `Новая заявка BINHAI AUTO: ${carTitle}`;
   const html = `
     <h2>Новая заявка BINHAI AUTO</h2>
@@ -67,8 +89,22 @@ Deno.serve(async (request) => {
       <tr><td><b>Телефон</b></td><td>${escapeHtml(phone)}</td></tr>
       <tr><td><b>VIN</b></td><td>${escapeHtml(vin)}</td></tr>
       <tr><td><b>Статус расчёта</b></td><td>${escapeHtml(payload.status || 'manual_review')}</td></tr>
-      <tr><td><b>Итого</b></td><td>${escapeHtml(formatRub(payload.totalRub))}</td></tr>
+      ${calculation ? `
+        <tr><td colspan="2"><b>Разбивка расчёта</b></td></tr>
+        <tr><td>Курс CNY → RUB</td><td>${escapeHtml(formatRate(calculation.cnyToRub))}</td></tr>
+        <tr><td>Курс EUR → RUB</td><td>${escapeHtml(formatRate(calculation.eurToRub))}</td></tr>
+        <tr><td>Цена автомобиля</td><td>${escapeHtml(formatRub(breakdown?.carPriceRub))}</td></tr>
+        <tr><td>Комиссия банка</td><td>${escapeHtml(formatRub(breakdown?.bankCommissionRub))}</td></tr>
+        <tr><td>Таможенная пошлина</td><td>${escapeHtml(formatRub(breakdown?.customsDutyRub))}</td></tr>
+        <tr><td>Утильсбор</td><td>${escapeHtml(formatRub(breakdown?.utilizationFeeRub))}</td></tr>
+        <tr><td>Таможенное оформление</td><td>${escapeHtml(formatRub(breakdown?.declarationFeeRub))}</td></tr>
+        <tr><td>СБКТС</td><td>${escapeHtml(formatRub(breakdown?.sbktsRub))}</td></tr>
+        <tr><td>ЭПТС</td><td>${escapeHtml(formatRub(breakdown?.eptsRub))}</td></tr>
+        <tr><td>Услуги брокера</td><td>${escapeHtml(formatRub(breakdown?.brokerFeeRub))}</td></tr>
+        <tr><td><b>Итого</b></td><td><b>${escapeHtml(formatRub(calculation.totalRub))}</b></td></tr>
+      ` : `<tr><td><b>Итого</b></td><td>${escapeHtml(formatRub(payload.totalRub))}</td></tr>`}
       <tr><td><b>Комментарий</b></td><td>${escapeHtml(payload.reason || '—')}</td></tr>
+      ${calculation?.disclaimer ? `<tr><td><b>Примечание к расчёту</b></td><td>${escapeHtml(calculation.disclaimer)}</td></tr>` : ''}
       <tr><td><b>Источник</b></td><td>${escapeHtml(payload.source || 'web')}</td></tr>
     </table>
     <p>Заявка также сохранена в админ-панели Supabase.</p>

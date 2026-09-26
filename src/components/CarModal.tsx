@@ -26,6 +26,7 @@ export default function CarModal({ car, onClose }: CarModalProps) {
 
   const [calcStatus, setCalcStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [calcResult, setCalcResult] = useState<CalculationResult | CalculationNeedsData | null>(null);
+  const [calcRates, setCalcRates] = useState<{ cnyToRub: number; eurToRub: number } | null>(null);
   const [leadName, setLeadName] = useState('');
   const [leadPhone, setLeadPhone] = useState('');
   const [leadStatus, setLeadStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
@@ -75,6 +76,7 @@ export default function CarModal({ car, onClose }: CarModalProps) {
     try {
       const { eur, cny } = await fetchCbrRatesForBrowser();
       const cnyToRub = estimateVtbCnyRate(cny);
+      setCalcRates({ cnyToRub, eurToRub: eur });
       const result = calculateTurnkeyPrice(
         {
           priceCny: car.priceCny,
@@ -128,6 +130,13 @@ export default function CarModal({ car, onClose }: CarModalProps) {
         contactName: leadName.trim() || null,
         contactPhone: leadPhone.trim(),
         vin: car.vin || null,
+        calculation: isCalculated ? {
+          breakdown: (calcResult as CalculationResult).breakdown,
+          totalRub: (calcResult as CalculationResult).totalRub,
+          disclaimer: (calcResult as CalculationResult).disclaimer,
+          cnyToRub: calcRates?.cnyToRub ?? null,
+          eurToRub: calcRates?.eurToRub ?? null,
+        } : null,
       },
     });
 
