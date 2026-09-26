@@ -34,6 +34,21 @@ export default function CarModal({ car, onClose }: CarModalProps) {
     return /^\+7\s?\(?9\d{2}\)?[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}$/.test(value.trim());
   }
 
+  function formatPhoneInput(value: string): string {
+    let digits = value.replace(/\D/g, '');
+    if (!digits) return '';
+    if (digits.startsWith('8')) digits = `7${digits.slice(1)}`;
+    if (!digits.startsWith('7')) digits = `7${digits}`;
+    digits = digits.slice(0, 11);
+    const local = digits.slice(1);
+    let result = '+7';
+    if (local.length > 0) result += ` ${local.slice(0, 3)}`;
+    if (local.length > 3) result += ` ${local.slice(3, 6)}`;
+    if (local.length > 6) result += `-${local.slice(6, 8)}`;
+    if (local.length > 8) result += `-${local.slice(8, 10)}`;
+    return result;
+  }
+
   function goTo(index: number) {
     const next = (index + images.length) % images.length;
     setActiveImage(next);
@@ -186,7 +201,7 @@ export default function CarModal({ car, onClose }: CarModalProps) {
                   <h4 style={{ margin: '0 0 12px', fontFamily: 'Manrope, sans-serif' }}>Оставить заявку на эту машину</h4>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     <input placeholder="Имя" value={leadName} onChange={(e) => setLeadName(e.target.value)} style={{ flex: '1 1 160px', padding: 10, borderRadius: 6, border: '1px solid #d6e1de' }} />
-                    <input type="tel" inputMode="tel" placeholder="Телефон* +7 999 123-45-67" value={leadPhone} onChange={(e) => setLeadPhone(e.target.value)} aria-invalid={leadPhone.length > 0 && !isRussianPhone(leadPhone)} style={{ flex: '1 1 220px', padding: 10, borderRadius: 6, border: `1px solid ${leadPhone.length > 0 && !isRussianPhone(leadPhone) ? '#b44a4a' : '#d6e1de'}` }} />
+                    <input type="tel" inputMode="tel" placeholder="Телефон* +7 999 123-45-67" value={leadPhone} onChange={(e) => setLeadPhone(formatPhoneInput(e.target.value))} aria-invalid={leadPhone.length > 0 && !isRussianPhone(leadPhone)} style={{ flex: '1 1 220px', padding: 10, borderRadius: 6, border: `1px solid ${leadPhone.length > 0 && !isRussianPhone(leadPhone) ? '#b44a4a' : '#d6e1de'}` }} />
                   </div>
                   {leadPhone.length > 0 && !isRussianPhone(leadPhone) && <p style={{ color: '#b44a4a', fontSize: 12, margin: '8px 0 0' }}>Введите номер в формате +7 999 123-45-67.</p>}
                   {car.vin && <p style={{ color: '#7a878d', fontSize: 12, margin: '8px 0 0' }}>VIN автомобиля будет отправлен менеджеру: {car.vin}</p>}
