@@ -73,7 +73,8 @@ begin
   );
   if updated_count <> 23 then
     raise exception 'Expected 23 matching cars, found %', updated_count;
-end $$;
+end;
+$$;
 
 commit;
 
