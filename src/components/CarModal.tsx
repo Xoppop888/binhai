@@ -60,6 +60,8 @@ export default function CarModal({ car, onClose }: CarModalProps) {
         {
           priceCny: car.priceCny,
           ageYears: Math.max(0, new Date().getFullYear() - (car.year || new Date().getFullYear())),
+          modelYear: car.year,
+          releaseDate: car.releaseDate,
           fuelType: (car.fuelType as FuelType) || 'unknown',
           engineVolumeCm3: parseEngineVolumeCm3(car.engineVolume),
           powerHp: car.powerHp ?? null,

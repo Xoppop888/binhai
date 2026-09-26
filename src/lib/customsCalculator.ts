@@ -17,7 +17,9 @@ export type FuelType = 'ice' | 'hybrid' | 'ev' | 'unknown';
 
 export interface CarForCalculation {
   priceCny: number;
-  ageYears: number;
+  ageYears?: number;
+  modelYear?: number | null;
+  releaseDate?: string | null;
   fuelType: FuelType;
   engineVolumeCm3: number | null;
   powerHp: number | null;
@@ -90,16 +92,43 @@ function getEurPerCm3ForOlderThan3Years(engineVolumeCm3: number): number {
   return 3.6;
 }
 
+function parseReleaseDate(raw: string | null | undefined): Date | null {
+  if (!raw) return null;
+  const value = raw.trim();
+  const match = value.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if (!match) {
+    const dmy = value.match(/^(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})/);
+    if (!dmy) return null;
+    const date = new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]));
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export function resolveAgeYears(car: CarForCalculation, now = new Date()): number {
+  const release = parseReleaseDate(car.releaseDate);
+  if (release) {
+    let years = now.getFullYear() - release.getFullYear();
+    const beforeAnniversary = now.getMonth() < release.getMonth() ||
+      (now.getMonth() === release.getMonth() && now.getDate() < release.getDate());
+    if (beforeAnniversary) years -= 1;
+    return Math.max(0, years);
+  }
+  return Math.max(0, now.getFullYear() - (car.modelYear || 0));
+}
+
 function calculateIceOrHybridDuty(
   car: CarForCalculation,
   customsValueRub: number,
   eurToRub: number,
+  ageYears: number,
 ): CalculationNeedsData | { dutyRub: number } {
   if (!car.engineVolumeCm3) {
     return { ok: false, reason: 'Не заполнен объём двигателя — растаможку по ДВС/гибриду посчитать нельзя' };
   }
 
-  if (car.ageYears < 3) {
+  if (ageYears < 3) {
     // Для машин младше 3 лет пошлина — % от таможенной стоимости с минимумом
     // в EUR/см³. Точные пороговые проценты и минимумы здесь НЕ зашиты —
     // слишком высок риск показать неверную цифру клиенту.
@@ -118,7 +147,7 @@ function calculateIceOrHybridDuty(
 }
 
 /** Утильсбор — льготный для физлица при личном пользовании, иначе коммерческая сетка. */
-function calculateUtilizationFee(car: CarForCalculation): CalculationNeedsData | { feeRub: number } {
+function calculateUtilizationFee(car: CarForCalculation, ageYears: number): CalculationNeedsData | { feeRub: number } {
   if (car.powerHp == null) {
     return { ok: false, reason: 'Не заполнена мощность (л.с.) — без неё нельзя проверить условие льготы по утильсбору' };
   }
@@ -128,7 +157,7 @@ function calculateUtilizationFee(car: CarForCalculation): CalculationNeedsData |
 
   if (qualifiesForDiscount) {
     // Льготные ставки для физлица, личное пользование (действуют с 01.12.2025 по 31.12.2026).
-    return { feeRub: car.ageYears < 3 ? 3_400 : 5_200 };
+    return { feeRub: ageYears < 3 ? 3_400 : 5_200 };
   }
 
   // Машина не проходит по льготе (>160 л.с. или >3000 см³) — коммерческая
@@ -166,6 +195,7 @@ export function calculateTurnkeyPrice(
     return { ok: false, reason: 'Тип силовой установки не определён — требуется ручная проверка в /admin перед расчётом' };
   }
 
+  const ageYears = resolveAgeYears(car);
   const carPriceRub = car.priceCny * rates.cnyToRub;
   const bankCommissionRub = carPriceRub * BANK_COMMISSION_RATE;
   const customsValueRub = carPriceRub; // упрощение: таможенная стоимость = цена по договору
@@ -177,9 +207,9 @@ export function calculateTurnkeyPrice(
     dutyResult = calculateEvDuty(car, customsValueRub);
   } else {
     // ice или hybrid — считаются одинаково, по объёму двигателя
-    dutyResult = calculateIceOrHybridDuty(car, customsValueRub, rates.eurToRub);
+    dutyResult = calculateIceOrHybridDuty(car, customsValueRub, rates.eurToRub, ageYears);
     if ('dutyRub' in dutyResult) {
-      utilResult = calculateUtilizationFee(car);
+      utilResult = calculateUtilizationFee(car, ageYears);
     }
   }
 
@@ -213,6 +243,31 @@ export function calculateTurnkeyPrice(
     totalRub,
     disclaimer: DISCLAIMER,
   };
+}
+
+export function parseEngineVolumeCm3(raw: string | number | null | undefined): number | null {
+  if (raw == null) return null;
+  if (typeof raw === 'number') return raw > 0 ? raw : null;
+  const match = String(raw).match(/(\d+(?:[.,]\d+)?)/);
+  if (!match) return null;
+  const num = parseFloat(match[1].replace(',', '.'));
+  if (!num || num <= 0) return null;
+  return num < 20 ? Math.round(num * 1000) : Math.round(num);
+}
+
+export async function fetchCbrRatesForBrowser(): Promise<{ eur: number; cny: number }> {
+  const res = await fetch('https://www.cbr-xml-daily.ru/daily_json.js');
+  if (!res.ok) throw new Error('Не удалось получить курс валют');
+  const data = await res.json();
+  const eur = data?.Valute?.EUR?.Value;
+  const cny = data?.Valute?.CNY?.Value;
+  if (!eur || !cny) throw new Error('Не удалось получить курс EUR/CNY');
+  return { eur, cny };
+}
+
+const CNY_MARKUP_PERCENT = 2.5;
+export function estimateVtbCnyRate(cbrCnyRate: number): number {
+  return cbrCnyRate * (1 + CNY_MARKUP_PERCENT / 100);
 }
 
 /** Курс EUR через официальный API ЦБ РФ — без скрапинга, без ключа. */
