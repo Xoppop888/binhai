@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Car, englishBrand, englishModel, formatCny } from '../data/cars';
 import CarModal from './CarModal';
 
-interface CatalogProps { cars: Car[]; source: string; }
+interface CatalogProps { cars: Car[]; source: string; loading?: boolean; }
 const PAGE_SIZE = 36;
 
 type SortOption = 'price_asc' | 'price_desc' | 'year_desc' | 'year_asc' | 'brand_az';
@@ -15,7 +15,7 @@ const SORT_LABELS: Record<SortOption, string> = {
   brand_az: 'Марка: А-Я',
 };
 
-export default function Catalog({ cars, source }: CatalogProps) {
+export default function Catalog({ cars, source, loading = false }: CatalogProps) {
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
   const [page, setPage] = useState(1);
   const [filter, setFilter] = useState<'all' | 'new' | 'used'>('all');
@@ -80,7 +80,7 @@ export default function Catalog({ cars, source }: CatalogProps) {
       </select>
       {(brandFilter !== 'all' || modelFilter !== 'all') && <button className="page-button" onClick={() => { changeBrand('all'); }}>✕ Сбросить марку/модель</button>}
     </div>
-    <div className="car-grid-v2">{visibleCars.map((car) => {
+    {loading ? <div className="catalog-loading" role="status"><div className="loader-ring" /><p>Загружаем полный каталог автомобилей…</p></div> : <div className="car-grid-v2">{visibleCars.map((car) => {
       const brand = englishBrand(car.brand, car.brandZh);
       const model = englishModel(car.model);
       return <article className="car-card-v2" key={car.id} onClick={() => setSelectedCar(car)} style={{ cursor: 'pointer' }}>
@@ -90,8 +90,8 @@ export default function Catalog({ cars, source }: CatalogProps) {
         </button>
         <div className="car-card-content"><p className="car-brand-v2">{brand}</p><h3>{model}</h3><p className="car-trim-v2">{car.engineVolume || 'Engine'} <span>·</span> {car.driveType || 'Drive'} <span>·</span> {car.mileageKm ? `${car.mileageKm.toLocaleString('ru-RU')} km` : 'Mileage on request'}</p><div className="car-card-footer"><div><small>С доставкой до Уссурийска</small><strong>{formatCny(car.priceCny)}</strong></div><button className="card-arrow" onClick={(e) => { e.stopPropagation(); setSelectedCar(car); }}>↗</button></div></div>
       </article>;
-    })}</div>
-    {visibleCars.length === 0 && <div className="empty-state"><h3>Автомобили не найдены</h3><p>Попробуйте выбрать другой фильтр.</p></div>}
-    {pageCount > 1 && <div className="pagination-v2"><button className="page-button" disabled={page === 1} onClick={() => { setPage((v) => v - 1); scrollCatalog(); }}>← Назад</button><span><b>{page}</b> / {pageCount}</span><button className="page-button" disabled={page === pageCount} onClick={() => { setPage((v) => v + 1); scrollCatalog(); }}>Вперёд →</button></div>}
+    })}</div>}
+    {!loading && visibleCars.length === 0 && <div className="empty-state"><h3>Автомобили не найдены</h3><p>Попробуйте выбрать другой фильтр или повторите загрузку.</p></div>}
+    {!loading && pageCount > 1 && <div className="pagination-v2"><button className="page-button" disabled={page === 1} onClick={() => { setPage((v) => v - 1); scrollCatalog(); }}>← Назад</button><span><b>{page}</b> / {pageCount}</span><button className="page-button" disabled={page === pageCount} onClick={() => { setPage((v) => v + 1); scrollCatalog(); }}>Вперёд →</button></div>}
   </div>{selectedCar && <CarModal car={selectedCar} onClose={() => setSelectedCar(null)} />}</section>;
 }
