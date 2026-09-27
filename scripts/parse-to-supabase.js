@@ -57,7 +57,6 @@ const LISTINGS = [
 const DRY_RUN = process.env.DRY_RUN === '1';
 const LIMIT = process.env.LIMIT ? Number(process.env.LIMIT) : Infinity;
 const MAX_LIST_PAGES = process.env.MAX_LIST_PAGES ? Number(process.env.MAX_LIST_PAGES) : 30;
-const ALLOW_DELETE = process.env.ALLOW_DELETE === '1';
 const RESTORE_FROM_DB = process.env.RESTORE_FROM_DB === '1';
 const MIN_CATALOG_ROWS_FOR_DELETE = process.env.MIN_CATALOG_ROWS_FOR_DELETE
   ? Number(process.env.MIN_CATALOG_ROWS_FOR_DELETE)
@@ -509,8 +508,6 @@ async function main() {
   // ------------------------------------------------------------------
   if (LIMIT !== Infinity) {
     console.log('\n⚠️  LIMIT задан — пропускаю очистку пропавших машин (частичный прогон).');
-  } else if (!ALLOW_DELETE) {
-    console.log('\n🛡️  Очистка отключена. Для удаления пропавших машин явно задайте ALLOW_DELETE=1.');
   } else {
     console.log('\n🧹 Проверяю, какие машины пропали с сайта-источника...');
 
@@ -522,7 +519,7 @@ async function main() {
       console.error('  ❌ Не удалось получить список машин для очистки:', fetchError.message);
     } else if (currentSourceIds.size < MIN_CATALOG_ROWS_FOR_DELETE || currentSourceIds.size < existing.length * 0.8) {
       console.error(`  🛑 Очистка отменена: источник вернул ${currentSourceIds.size} карточек при ${existing.length} в базе.`);
-      console.error('     Проверьте пагинацию/доступ к источнику и повторите запуск без удаления.');
+      console.error('     Порог безопасности: минимум 100 карточек и не менее 80% базы.');
     } else {
       const toDelete = (existing || []).filter((row) => row.source_id && !currentSourceIds.has(row.source_id));
 
