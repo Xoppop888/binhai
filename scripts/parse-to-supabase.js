@@ -58,6 +58,7 @@ const DRY_RUN = process.env.DRY_RUN === '1';
 const LIMIT = process.env.LIMIT ? Number(process.env.LIMIT) : Infinity;
 const MAX_LIST_PAGES = process.env.MAX_LIST_PAGES ? Number(process.env.MAX_LIST_PAGES) : 30;
 const ALLOW_DELETE = process.env.ALLOW_DELETE === '1';
+const RESTORE_FROM_DB = process.env.RESTORE_FROM_DB === '1';
 const MIN_CATALOG_ROWS_FOR_DELETE = process.env.MIN_CATALOG_ROWS_FOR_DELETE
   ? Number(process.env.MIN_CATALOG_ROWS_FOR_DELETE)
   : 100;
@@ -375,8 +376,20 @@ async function main() {
 
   const supabase = DRY_RUN ? null : createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-  const links = await collectDetailLinks();
-  console.log(`\n🔗 Всего найдено карточек: ${links.size}`);
+  let links;
+  if (RESTORE_FROM_DB) {
+    const { data, error } = await supabase
+      .from('cars')
+      .select('source_url, category')
+      .not('source_url', 'is', null)
+      .or('price_cny.eq.0,image_url.is.null');
+    if (error) throw new Error(`Не удалось получить записи для восстановления: ${error.message}`);
+    links = new Map((data || []).map((row) => [row.source_url, row.category || 'used']));
+    console.log(`\n♻️  Режим восстановления: найдено ${links.size} записей с неполными данными`);
+  } else {
+    links = await collectDetailLinks();
+    console.log(`\n🔗 Всего найдено карточек: ${links.size}`);
+  }
 
   // Дедуп по source_id (номер карточки на сайте-источнике) — на случай,
   // если одна и та же карточка встретилась под чуть разными URL
