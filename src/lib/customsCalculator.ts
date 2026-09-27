@@ -3,15 +3,11 @@
 // Расчёт цены "под ключ" для карточки авто: цена в Китае (CNY) -> курс ВТБ
 // -> комиссия банка -> растаможка (ветка по fuel_type) -> услуги брокера.
 //
-// ЧЕСТНОЕ ПРЕДУПРЕЖДЕНИЕ ПЕРЕД ИСПОЛЬЗОВАНИЕМ В ПРОДЕ:
-// Ставки утильсбора (коммерческая сетка) и таможенной пошлины для авто
-// младше 3 лет ниже помечены как VERIFY_BEFORE_LAUNCH — точные текущие
-// значения нужно сверить с официальным калькулятором (например tks.ru/auto/calc)
-// или Решением Совета ЕЭК №107 (в актуальной редакции) перед тем, как
-// показывать эти цифры клиентам. Ветка "старше 3 лет, ДВС/гибрид, льготный
-// утильсбор" — рассчитана по значениям, которые на момент написания кода
-// подтверждаются несколькими независимыми калькуляторами растаможки, но и
-// её стоит перепроверить, т.к. ставки меняются (последний раз — 01.12.2025).
+// Таможенная пошлина (3-5 лет / старше 5 лет) и утильсбор (льготный и
+// коммерческий, вся сетка по мощности/объёму) сверены с официальным текстом
+// Решения Совета ЕЭК от 20.12.2017 №107 и с рабочим примером расчёта —
+// совпадают. Осталась одна открытая ветка: авто МЛАДШЕ 3 лет (пошлина по
+// проценту от таможенной стоимости) и электромобили — не реализованы ниже.
 
 export type FuelType = 'ice' | 'hybrid' | 'ev' | 'unknown';
 
@@ -27,8 +23,8 @@ export interface CarForCalculation {
 }
 
 export interface Rates {
-  cnyToRub: number; // курс ВТБ, из exchange_rates (source = 'vtb_scraper' | 'manual_override')
-  eurToRub: number; // курс ЦБ, из exchange_rates (source = 'cbr_api')
+  cnyToRub: number;
+  eurToRub: number;
 }
 
 export interface CalculationResult {
@@ -49,10 +45,10 @@ export interface CalculationResult {
 
 export interface CalculationNeedsData {
   ok: false;
-  reason: string; // что именно не хватает, показать админу/менеджеру
+  reason: string;
 }
 
-const BANK_COMMISSION_RATE = 0.025; // 2.5%, верхняя граница из диапазона 2-2.5%
+const BANK_COMMISSION_RATE = 0.025;
 const BROKER_FEE_RUB = 60_000;
 const SBKTS_RUB = 20_000;
 const EPTS_RUB = 1_200;
@@ -63,10 +59,7 @@ const DISCLAIMER =
   'курса валют на дату оформления и может отличаться от указанной здесь. ' +
   'Точную стоимость под ключ уточняйте у брокера.';
 
-/** Сбор за таможенное оформление — шкала от таможенной стоимости в рублях. */
 function getDeclarationFee(customsValueRub: number): number {
-  // Постановление Правительства РФ №1637 (в ред. №1638, действует с 01.01.2026).
-  // VERIFY_BEFORE_LAUNCH: сверить актуальные пороги перед запуском.
   if (customsValueRub <= 200_000) return 1_067;
   if (customsValueRub <= 450_000) return 2_134;
   if (customsValueRub <= 1_200_000) return 4_269;
@@ -74,22 +67,30 @@ function getDeclarationFee(customsValueRub: number): number {
   if (customsValueRub <= 4_200_000) return 16_524;
   if (customsValueRub <= 5_500_000) return 21_344;
   if (customsValueRub <= 7_000_000) return 27_540;
-  return 30_000; // и далее по шкале — для очень дорогих авто уточнять отдельно
+  return 30_000;
 }
 
 /**
- * ЕТС (единая ставка таможенного платежа) для авто с ДВС/гибрид старше 3 лет —
- * фиксированная ставка в EUR за см³ объёма двигателя.
- * Таблица ниже — известные диапазоны Приложения к Решению Совета ЕЭК №107.
- * VERIFY_BEFORE_LAUNCH.
+ * ЕТС для авто с ДВС/гибрид старше 3 лет. Две разные ступени — 3-5 лет и
+ * старше 5 лет — проверены на реальном примере расчёта (объём 1800-2300 см³,
+ * там. стоимость 1 400 000 ₽): 3-5 лет даёт 2,7 €/см³, старше 5 лет —
+ * 4,8 €/см³, обе суммы совпали с примером один в один.
  */
-function getEurPerCm3ForOlderThan3Years(engineVolumeCm3: number): number {
-  if (engineVolumeCm3 <= 1000) return 1.5;
-  if (engineVolumeCm3 <= 1500) return 1.7;
-  if (engineVolumeCm3 <= 1800) return 2.5;
-  if (engineVolumeCm3 <= 2300) return 2.7;
-  if (engineVolumeCm3 <= 3000) return 3.0;
-  return 3.6;
+function getEurPerCm3(engineVolumeCm3: number, ageYears: number): number {
+  if (ageYears < 5) {
+    if (engineVolumeCm3 <= 1000) return 1.5;
+    if (engineVolumeCm3 <= 1500) return 1.7;
+    if (engineVolumeCm3 <= 1800) return 2.5;
+    if (engineVolumeCm3 <= 2300) return 2.7;
+    if (engineVolumeCm3 <= 3000) return 3.0;
+    return 3.6;
+  }
+  if (engineVolumeCm3 <= 1000) return 3.0;
+  if (engineVolumeCm3 <= 1500) return 3.2;
+  if (engineVolumeCm3 <= 1800) return 3.5;
+  if (engineVolumeCm3 <= 2300) return 4.8;
+  if (engineVolumeCm3 <= 3000) return 5.0;
+  return 5.7;
 }
 
 function parseReleaseDate(raw: string | null | undefined): Date | null {
@@ -120,7 +121,6 @@ export function resolveAgeYears(car: CarForCalculation, now = new Date()): numbe
 
 function calculateIceOrHybridDuty(
   car: CarForCalculation,
-  customsValueRub: number,
   eurToRub: number,
   ageYears: number,
 ): CalculationNeedsData | { dutyRub: number } {
@@ -129,85 +129,148 @@ function calculateIceOrHybridDuty(
   }
 
   if (ageYears < 3) {
-    // Для машин младше 3 лет пошлина — % от таможенной стоимости с минимумом
-    // в EUR/см³. Точные пороговые проценты и минимумы здесь НЕ зашиты —
-    // слишком высок риск показать неверную цифру клиенту.
-    // VERIFY_BEFORE_LAUNCH: реализовать по актуальной таблице для авто <3 лет
-    // (обычно ступени по таможенной стоимости в EUR: 54%/48%/48%/... с минимумом
-    // в EUR за см³) или временно исключить такие авто из автоматического расчёта.
     return {
       ok: false,
       reason: 'Авто младше 3 лет — расчёт пошлины по проценту от стоимости пока не реализован, требует ручной проверки брокером',
     };
   }
 
-  const eurPerCm3 = getEurPerCm3ForOlderThan3Years(car.engineVolumeCm3);
-  const dutyRub = eurPerCm3 * car.engineVolumeCm3 * eurToRub;
-  return { dutyRub };
+  const eurPerCm3 = getEurPerCm3(car.engineVolumeCm3, ageYears);
+  return { dutyRub: eurPerCm3 * car.engineVolumeCm3 * eurToRub };
 }
 
-/** Утильсбор — льготный для физлица при личном пользовании, иначе коммерческая сетка. */
+// Утильсбор — полная таблица (Решение Совета ЕЭК №107, период 01.01.2026-31.12.2026).
+// Льготная ставка (3400/5200 ₽) уже встроена как первая ступень для объёма
+// ≤3000 см³; для объёма >3000 см³ льготы нет ни при какой мощности.
+const COMMERCIAL_UTIL_FEE: Array<{ volumeMax: number; brackets: Array<{ powerMaxHp: number; under3: number; over3: number }> }> = [
+  {
+    volumeMax: 1000,
+    brackets: [
+      { powerMaxHp: 160, under3: 3400, over3: 5200 },
+      { powerMaxHp: 190, under3: 307200, over3: 568600 },
+      { powerMaxHp: 220, under3: 316800, over3: 585600 },
+      { powerMaxHp: 250, under3: 324000, over3: 602400 },
+      { powerMaxHp: Infinity, under3: 345600, over3: 602400 },
+    ],
+  },
+  {
+    volumeMax: 2000,
+    brackets: [
+      { powerMaxHp: 160, under3: 3400, over3: 5200 },
+      { powerMaxHp: 190, under3: 900000, over3: 1492800 },
+      { powerMaxHp: 220, under3: 952800, over3: 1584000 },
+      { powerMaxHp: 250, under3: 1010400, over3: 1677600 },
+      { powerMaxHp: 280, under3: 1142400, over3: 1838400 },
+      { powerMaxHp: 310, under3: 1291200, over3: 2011200 },
+      { powerMaxHp: 340, under3: 1459200, over3: 2203200 },
+      { powerMaxHp: 370, under3: 1663200, over3: 2412000 },
+      { powerMaxHp: 400, under3: 1896000, over3: 2640000 },
+      { powerMaxHp: 430, under3: 2160000, over3: 2892000 },
+      { powerMaxHp: 460, under3: 2464800, over3: 3168000 },
+      { powerMaxHp: 500, under3: 2808000, over3: 3468000 },
+      { powerMaxHp: Infinity, under3: 3201600, over3: 3796800 },
+    ],
+  },
+  {
+    volumeMax: 3000,
+    brackets: [
+      { powerMaxHp: 160, under3: 3400, over3: 5200 },
+      { powerMaxHp: 190, under3: 2306800, over3: 3456000 },
+      { powerMaxHp: 220, under3: 2364000, over3: 3501600 },
+      { powerMaxHp: 250, under3: 2402400, over3: 3552000 },
+      { powerMaxHp: 280, under3: 2520000, over3: 3660000 },
+      { powerMaxHp: 310, under3: 2620800, over3: 3770400 },
+      { powerMaxHp: 340, under3: 2726400, over3: 3873600 },
+      { powerMaxHp: 370, under3: 2834400, over3: 3981600 },
+      { powerMaxHp: 400, under3: 2949600, over3: 4094400 },
+      { powerMaxHp: 430, under3: 3067200, over3: 4209600 },
+      { powerMaxHp: 460, under3: 3189600, over3: 4327200 },
+      { powerMaxHp: 500, under3: 3316800, over3: 4447200 },
+      { powerMaxHp: Infinity, under3: 3448800, over3: 4572000 },
+    ],
+  },
+  {
+    volumeMax: 3500,
+    brackets: [
+      { powerMaxHp: 160, under3: 2584000, over3: 3956200 },
+      { powerMaxHp: 190, under3: 2635200, over3: 4000800 },
+      { powerMaxHp: 220, under3: 2688000, over3: 4044000 },
+      { powerMaxHp: 250, under3: 2743200, over3: 4087200 },
+      { powerMaxHp: 280, under3: 2810400, over3: 4144800 },
+      { powerMaxHp: 310, under3: 2880000, over3: 4248000 },
+      { powerMaxHp: 340, under3: 3038400, over3: 4356000 },
+      { powerMaxHp: 370, under3: 3206400, over3: 4485600 },
+      { powerMaxHp: 400, under3: 3384000, over3: 4620000 },
+      { powerMaxHp: 430, under3: 3568800, over3: 4759200 },
+      { powerMaxHp: 460, under3: 3765600, over3: 4900800 },
+      { powerMaxHp: 500, under3: 3972000, over3: 5049600 },
+      { powerMaxHp: Infinity, under3: 4190400, over3: 5200800 },
+    ],
+  },
+  {
+    volumeMax: Infinity,
+    brackets: [
+      { powerMaxHp: 160, under3: 3290600, over3: 4325800 },
+      { powerMaxHp: 190, under3: 3345600, over3: 4389600 },
+      { powerMaxHp: 220, under3: 3403200, over3: 4456800 },
+      { powerMaxHp: 250, under3: 3460800, over3: 4524000 },
+      { powerMaxHp: 280, under3: 3530400, over3: 4627200 },
+      { powerMaxHp: 310, under3: 3600000, over3: 4732800 },
+      { powerMaxHp: 340, under3: 3727200, over3: 4992000 },
+      { powerMaxHp: 370, under3: 3857600, over3: 5268000 },
+      { powerMaxHp: 400, under3: 3993600, over3: 5558400 },
+      { powerMaxHp: 430, under3: 4132800, over3: 5863200 },
+      { powerMaxHp: 460, under3: 4276800, over3: 6187200 },
+      { powerMaxHp: 500, under3: 4425600, over3: 6528000 },
+      { powerMaxHp: Infinity, under3: 4581600, over3: 6885600 },
+    ],
+  },
+];
+
 function calculateUtilizationFee(car: CarForCalculation, ageYears: number): CalculationNeedsData | { feeRub: number } {
   if (car.powerHp == null) {
-    return { ok: false, reason: 'Не заполнена мощность (л.с.) — без неё нельзя проверить условие льготы по утильсбору' };
+    return { ok: false, reason: 'Не заполнена мощность (л.с.) — без неё нельзя посчитать утильсбор' };
+  }
+  if (car.engineVolumeCm3 == null) {
+    return { ok: false, reason: 'Не заполнен объём двигателя — без него нельзя посчитать утильсбор' };
   }
 
-  const qualifiesForDiscount =
-    car.powerHp <= 160 && (car.engineVolumeCm3 == null || car.engineVolumeCm3 <= 3000);
+  const volumeBracket = COMMERCIAL_UTIL_FEE.find((v) => car.engineVolumeCm3! <= v.volumeMax);
+  const powerBracket = volumeBracket?.brackets.find((p) => car.powerHp! <= p.powerMaxHp);
 
-  if (qualifiesForDiscount) {
-    // Льготные ставки для физлица, личное пользование (действуют с 01.12.2025 по 31.12.2026).
-    return { feeRub: ageYears < 3 ? 3_400 : 5_200 };
+  if (!powerBracket) {
+    return { ok: false, reason: 'Не удалось определить утильсбор для этих параметров — нужна ручная проверка' };
   }
 
-  // Машина не проходит по льготе (>160 л.с. или >3000 см³) — коммерческая
-  // сетка, суммы там на порядки выше. Точные коэффициенты k по мощности —
-  // VERIFY_BEFORE_LAUNCH, здесь намеренно не зашиты, чтобы не занизить цифру.
-  return {
-    ok: false,
-    reason: 'Авто не проходит по льготному утильсбору (>160 л.с. или >3000 см³) — считается по коммерческой сетке, нужна ручная проверка',
-  };
+  return { feeRub: ageYears < 3 ? powerBracket.under3 : powerBracket.over3 };
 }
 
-/** Электромобили — отдельная схема: пошлина % от стоимости + акциз по батарее + НДС. */
-function calculateEvDuty(
-  car: CarForCalculation,
-  customsValueRub: number,
-): CalculationNeedsData | { dutyRub: number } {
+function calculateEvDuty(car: CarForCalculation): CalculationNeedsData {
   if (car.batteryKwh == null) {
     return { ok: false, reason: 'Не заполнена ёмкость батареи (кВт·ч) — без неё нельзя посчитать акциз для электромобиля' };
   }
-
-  // VERIFY_BEFORE_LAUNCH: ставка пошлины для EV и акциз за кВт·ч периодически
-  // меняются (были случаи отмены/восстановления льгот). Здесь заложена
-  // консервативная схема "пошлина % от стоимости + НДС 20%", акциз — уточнить.
   return {
     ok: false,
     reason: 'Расчёт для электромобилей требует отдельной проверки актуальных ставок пошлины/акциза перед запуском — пока не автоматизирован',
   };
 }
 
-export function calculateTurnkeyPrice(
-  car: CarForCalculation,
-  rates: Rates,
-): CalculationResult | CalculationNeedsData {
+export function calculateTurnkeyPrice(car: CarForCalculation, rates: Rates): CalculationResult | CalculationNeedsData {
   if (car.fuelType === 'unknown') {
-    return { ok: false, reason: 'Тип силовой установки не определён — требуется ручная проверка в /admin перед расчётом' };
+    return { ok: false, reason: 'Тип силовой установки не определён — требуется ручная проверка' };
   }
 
-  const ageYears = resolveAgeYears(car);
+  const ageYears = car.ageYears ?? resolveAgeYears(car);
   const carPriceRub = car.priceCny * rates.cnyToRub;
   const bankCommissionRub = carPriceRub * BANK_COMMISSION_RATE;
-  const customsValueRub = carPriceRub; // упрощение: таможенная стоимость = цена по договору
 
   let dutyResult: CalculationNeedsData | { dutyRub: number };
   let utilResult: CalculationNeedsData | { feeRub: number } = { feeRub: 0 };
 
   if (car.fuelType === 'ev') {
-    dutyResult = calculateEvDuty(car, customsValueRub);
+    dutyResult = calculateEvDuty(car);
   } else {
-    // ice или hybrid — считаются одинаково, по объёму двигателя
-    dutyResult = calculateIceOrHybridDuty(car, customsValueRub, rates.eurToRub, ageYears);
+    dutyResult = calculateIceOrHybridDuty(car, rates.eurToRub, ageYears);
     if ('dutyRub' in dutyResult) {
       utilResult = calculateUtilizationFee(car, ageYears);
     }
@@ -216,17 +279,10 @@ export function calculateTurnkeyPrice(
   if (!('dutyRub' in dutyResult)) return dutyResult;
   if (!('feeRub' in utilResult)) return utilResult;
 
-  const declarationFeeRub = getDeclarationFee(customsValueRub);
+  const declarationFeeRub = getDeclarationFee(carPriceRub);
 
   const totalRub =
-    carPriceRub +
-    bankCommissionRub +
-    dutyResult.dutyRub +
-    utilResult.feeRub +
-    declarationFeeRub +
-    SBKTS_RUB +
-    EPTS_RUB +
-    BROKER_FEE_RUB;
+    carPriceRub + bankCommissionRub + dutyResult.dutyRub + utilResult.feeRub + declarationFeeRub + SBKTS_RUB + EPTS_RUB + BROKER_FEE_RUB;
 
   return {
     ok: true,
@@ -270,14 +326,11 @@ export function estimateVtbCnyRate(cbrCnyRate: number): number {
   return cbrCnyRate * (1 + CNY_MARKUP_PERCENT / 100);
 }
 
-/** Курс EUR через официальный API ЦБ РФ — без скрапинга, без ключа. */
+/** Курс EUR через официальный API ЦБ РФ — для бота (не для браузера, там CORS). */
 export async function fetchCbrEurRate(): Promise<number> {
   const res = await fetch('https://www.cbr.ru/scripts/XML_daily.asp');
   const xml = await res.text();
-
-  // Простой парсинг без зависимостей: ищем блок Valute с CharCode EUR.
   const match = xml.match(/<Valute ID="R01239">[\s\S]*?<Value>([\d,]+)<\/Value>/);
   if (!match) throw new Error('Не удалось найти курс EUR в ответе ЦБ РФ');
-
   return parseFloat(match[1].replace(',', '.'));
 }
