@@ -153,6 +153,7 @@ const SPEC_SYNONYMS = {
   bodyCondition: ['состояние машины', 'состояние кузова'],
   insuranceUntil: ['страхование осаго', 'страховка осаго', 'осаго'],
   name: ['наименование автомобиля'],
+  power: ['功率', '发动机最大功率', '最大功率', '马力', 'мощность', 'л.с', 'лс', 'power', 'horsepower'],
 };
 
 function matchSynonym(key) {
@@ -187,6 +188,15 @@ function parsePriceCny(str) {
   if (!str) return null;
   const digits = str.replace(/[^\d]/g, '');
   return digits ? Number(digits) : null;
+}
+
+function parsePowerHp(str) {
+  if (!str) return null;
+  const value = String(str).replace(',', '.');
+  const kw = value.match(/(\d+(?:\.\d+)?)\s*(?:kw|квт)/i);
+  if (kw) return Math.round(Number(kw[1]) * 1.3596216173);
+  const hp = value.match(/(\d+(?:\.\d+)?)\s*(?:hp|л\.?\s*с\.?|лс|马力|ps)/i);
+  return hp ? Math.round(Number(hp[1])) : null;
 }
 
 async function fetchDetail(url, categoryHint, retries = 2) {
@@ -279,6 +289,7 @@ async function fetchDetail(url, categoryHint, retries = 2) {
       releaseDate: norm.releaseDate || null,
       mileageKm: parseMileageKm(norm.mileage),
       engineVolume: norm.engineVolume || null,
+      powerHp: parsePowerHp(norm.power),
       keysCount: norm.keysCount || null,
       bodyCondition: norm.bodyCondition || null,
       insuranceUntil: norm.insuranceUntil || null,
@@ -431,6 +442,9 @@ async function main() {
       body_condition: detail.bodyCondition,
       insurance_until: detail.insuranceUntil,
       fuel_type: fuelType,
+      // Часть карточек источника не содержит мощность. Не отправляем null,
+      // чтобы upsert не затирал вручную проверенное значение в Supabase.
+      ...(detail.powerHp != null ? { power_hp: detail.powerHp } : {}),
     };
 
     results.push(row);
