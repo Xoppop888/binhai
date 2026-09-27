@@ -59,6 +59,7 @@ const LIMIT = process.env.LIMIT ? Number(process.env.LIMIT) : Infinity;
 const MAX_LIST_PAGES = process.env.MAX_LIST_PAGES ? Number(process.env.MAX_LIST_PAGES) : 30;
 const ALLOW_DELETE = process.env.ALLOW_DELETE === '1';
 const RESTORE_FROM_DB = process.env.RESTORE_FROM_DB === '1';
+const REMOVE_MISSING = process.env.REMOVE_MISSING === '1';
 const MIN_CATALOG_ROWS_FOR_DELETE = process.env.MIN_CATALOG_ROWS_FOR_DELETE
   ? Number(process.env.MIN_CATALOG_ROWS_FOR_DELETE)
   : 100;
@@ -415,6 +416,7 @@ async function main() {
 
   const entries = [...dedupedLinks.values()].map(({ url, category }) => [url, category]).slice(0, LIMIT);
   const results = [];
+  const missingSourceIds = new Set();
   let ok = 0;
   let fail = 0;
 
@@ -424,6 +426,8 @@ async function main() {
     const detail = await fetchDetail(url, categoryHint);
     if (!detail || !detail.title) {
       console.log('пропущено');
+      const sourceId = url.match(/Products-Details\/(\d+)\.html/)?.[1];
+      if (sourceId) missingSourceIds.add(sourceId);
       fail++;
       await sleep(300);
       continue;
@@ -497,6 +501,27 @@ async function main() {
   }
 
   console.log('\n✅ Запись завершена.');
+
+  // В режиме восстановления проверяем только исходные неполные записи.
+  // Это безопасно даже если листинг источника урезан: полноценные 198
+  // записей сюда не попадают и никогда не удаляются этим шагом.
+  if (RESTORE_FROM_DB && REMOVE_MISSING && LIMIT === Infinity && missingSourceIds.size > 0) {
+    console.log(`\n🧹 Удаляю ${missingSourceIds.size} карточек, которых больше нет у источника...`);
+    for (const sourceId of missingSourceIds) {
+      const { data, error } = await supabase
+        .from('cars')
+        .delete()
+        .eq('source_id', sourceId)
+        .select('brand, model, source_id');
+      if (error) {
+        console.error(`  ❌ Не удалось удалить source_id=${sourceId}: ${error.message}`);
+      } else if (data?.length) {
+        console.log(`  🗑️  Удалено: ${data[0].brand} ${data[0].model} (${sourceId})`);
+      }
+    }
+  } else if (RESTORE_FROM_DB && REMOVE_MISSING && missingSourceIds.size === 0) {
+    console.log('\n✅ Пропавших карточек в неполном наборе не обнаружено.');
+  }
 
   // ------------------------------------------------------------------
   // Очистка: убираем из Supabase машины, которых больше нет на сайте-
