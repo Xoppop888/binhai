@@ -380,11 +380,17 @@ async function main() {
   if (RESTORE_FROM_DB) {
     const { data, error } = await supabase
       .from('cars')
-      .select('source_url, category')
-      .not('source_url', 'is', null)
+      .select('source_url, source_id, category')
       .or('price_cny.eq.0,image_url.is.null');
     if (error) throw new Error(`Не удалось получить записи для восстановления: ${error.message}`);
-    links = new Map((data || []).map((row) => [row.source_url, row.category || 'used']));
+    links = new Map((data || [])
+      .map((row) => [
+        row.source_url || (row.source_id
+          ? `${SITE}/Products-Details/${row.source_id}.html`
+          : null),
+        row.category || 'used',
+      ])
+      .filter(([url]) => Boolean(url)));
     console.log(`\n♻️  Режим восстановления: найдено ${links.size} записей с неполными данными`);
   } else {
     links = await collectDetailLinks();
