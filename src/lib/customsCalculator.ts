@@ -76,8 +76,8 @@ function getDeclarationFee(customsValueRub: number): number {
  * там. стоимость 1 400 000 ₽): 3-5 лет даёт 2,7 €/см³, старше 5 лет —
  * 4,8 €/см³, обе суммы совпали с примером один в один.
  */
-function getEurPerCm3(engineVolumeCm3: number, ageYears: number): number {
-  if (ageYears < 5) {
+function getEurPerCm3(engineVolumeCm3: number, isAtMostFiveYears: boolean): number {
+  if (isAtMostFiveYears) {
     if (engineVolumeCm3 <= 1000) return 1.5;
     if (engineVolumeCm3 <= 1500) return 1.7;
     if (engineVolumeCm3 <= 1800) return 2.5;
@@ -99,9 +99,19 @@ function parseReleaseDate(raw: string | null | undefined): Date | null {
   const match = value.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
   if (!match) {
     const dmy = value.match(/^(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})/);
-    if (!dmy) return null;
-    const date = new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]));
-    return Number.isNaN(date.getTime()) ? null : date;
+    if (dmy) {
+      const date = new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]));
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+    const russianMonth = value.match(/^(январ[ьяе]|феврал[ьяе]|март[ае]?|апрел[ьяе]|ма[йя]|июн[ьяе]|июл[ьяе]|август[ае]|сентябр[ьяе]|октябр[ьяе]|ноябр[ьяе]|декабр[ьяе])\s+(\d{4})/i);
+    if (russianMonth) {
+      const months = ['январ', 'феврал', 'март', 'апрел', 'май', 'июн', 'июл', 'август', 'сентябр', 'октябр', 'ноябр', 'декабр'];
+      const monthIndex = months.findIndex((month) => russianMonth[1].toLowerCase().startsWith(month));
+      if (monthIndex !== -1) return new Date(Number(russianMonth[2]), monthIndex, 1);
+    }
+    const yearMonth = value.match(/^(\d{4})[-/.](\d{1,2})(?:\D|$)/);
+    if (yearMonth) return new Date(Number(yearMonth[1]), Number(yearMonth[2]) - 1, 1);
+    return null;
   }
   const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
   return Number.isNaN(date.getTime()) ? null : date;
@@ -119,23 +129,36 @@ export function resolveAgeYears(car: CarForCalculation, now = new Date()): numbe
   return Math.max(0, now.getFullYear() - (car.modelYear || 0));
 }
 
+function isAtMostYearsOld(car: CarForCalculation, years: number, now: Date, ageYears: number): boolean {
+  const release = parseReleaseDate(car.releaseDate);
+  if (!release) return ageYears <= years;
+  const anniversary = new Date(release);
+  anniversary.setFullYear(release.getFullYear() + years);
+  return now.getTime() <= anniversary.getTime();
+}
+
 function calculateIceOrHybridDuty(
   car: CarForCalculation,
   eurToRub: number,
   ageYears: number,
+  now: Date,
 ): CalculationNeedsData | { dutyRub: number } {
   if (!car.engineVolumeCm3) {
     return { ok: false, reason: 'Не заполнен объём двигателя — растаможку по ДВС/гибриду посчитать нельзя' };
   }
 
-  if (ageYears < 3) {
+  // «Не более 3 лет» и «не более 5 лет» включают сам день годовщины.
+  if (isAtMostYearsOld(car, 3, now, ageYears)) {
     return {
       ok: false,
-      reason: 'Авто младше 3 лет — расчёт пошлины по проценту от стоимости пока не реализован, требует ручной проверки брокером',
+      reason: 'Авто не старше 3 лет — расчёт пошлины по проценту от стоимости пока не реализован, требуется ручная проверка брокером',
     };
   }
 
-  const eurPerCm3 = getEurPerCm3(car.engineVolumeCm3, ageYears);
+  const eurPerCm3 = getEurPerCm3(
+    car.engineVolumeCm3,
+    isAtMostYearsOld(car, 5, now, ageYears),
+  );
   return { dutyRub: eurPerCm3 * car.engineVolumeCm3 * eurToRub };
 }
 
@@ -260,7 +283,8 @@ export function calculateTurnkeyPrice(car: CarForCalculation, rates: Rates): Cal
     return { ok: false, reason: 'Тип силовой установки не определён — требуется ручная проверка' };
   }
 
-  const ageYears = car.ageYears ?? resolveAgeYears(car);
+  const now = new Date();
+  const ageYears = car.ageYears ?? resolveAgeYears(car, now);
   const carPriceRub = car.priceCny * rates.cnyToRub;
   const bankCommissionRub = carPriceRub * BANK_COMMISSION_RATE;
 
@@ -270,7 +294,7 @@ export function calculateTurnkeyPrice(car: CarForCalculation, rates: Rates): Cal
   if (car.fuelType === 'ev') {
     dutyResult = calculateEvDuty(car);
   } else {
-    dutyResult = calculateIceOrHybridDuty(car, rates.eurToRub, ageYears);
+    dutyResult = calculateIceOrHybridDuty(car, rates.eurToRub, ageYears, now);
     if ('dutyRub' in dutyResult) {
       utilResult = calculateUtilizationFee(car, ageYears);
     }

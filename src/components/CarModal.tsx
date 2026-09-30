@@ -80,7 +80,6 @@ export default function CarModal({ car, onClose }: CarModalProps) {
       const result = calculateTurnkeyPrice(
         {
           priceCny: car.priceCny,
-          ageYears: Math.max(0, new Date().getFullYear() - (car.year || new Date().getFullYear())),
           modelYear: car.year,
           releaseDate: car.releaseDate,
           fuelType: (car.fuelType as FuelType) || 'unknown',
