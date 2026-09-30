@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Car, englishBrand, englishModel, formatCny } from '../data/cars';
+import { estimateVtbCnyRate, fetchCbrRatesForBrowser } from '../lib/siteCustomsCalculator';
 import CarModal from './CarModal';
 
 interface CatalogProps { cars: Car[]; source: string; loading?: boolean; unavailable?: boolean; }
 const PAGE_SIZE = 36;
 
 type SortOption = 'price_asc' | 'price_desc' | 'year_desc' | 'year_asc' | 'brand_az';
+type Currency = 'CNY' | 'RUB';
 
 const SORT_LABELS: Record<SortOption, string> = {
   price_asc: 'Цена: сначала дешевле',
@@ -17,11 +19,26 @@ const SORT_LABELS: Record<SortOption, string> = {
 
 export default function Catalog({ cars, source, loading = false, unavailable = false }: CatalogProps) {
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
+  const [cnyToRubRate, setCnyToRubRate] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [filter, setFilter] = useState<'all' | 'new' | 'used'>('all');
   const [brandFilter, setBrandFilter] = useState<string>('all');
   const [modelFilter, setModelFilter] = useState<string>('all');
   const [sort, setSort] = useState<SortOption>('price_asc');
+  const [currency, setCurrency] = useState<Currency>('CNY');
+  const [maxBudget, setMaxBudget] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchCbrRatesForBrowser()
+      .then(({ cny }) => {
+        if (!cancelled) setCnyToRubRate(estimateVtbCnyRate(cny));
+      })
+      .catch(() => {
+        // Цена в CNY остаётся доступной, если внешний курс временно недоступен.
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   const brandOptions = useMemo(() => {
     const set = new Set<string>();
@@ -47,17 +64,25 @@ export default function Catalog({ cars, source, loading = false, unavailable = f
     let result = filter === 'all' ? cars : cars.filter((car) => (car.category || 'used') === filter);
     if (brandFilter !== 'all') result = result.filter((car) => englishBrand(car.brand, car.brandZh) === brandFilter);
     if (modelFilter !== 'all') result = result.filter((car) => englishModel(car.model) === modelFilter);
+    const budget = Number(maxBudget);
+    if (budget > 0) {
+      result = result.filter((car) => {
+        const price = currency === 'RUB' ? (cnyToRubRate ? car.priceCny * cnyToRubRate : null) : car.priceCny;
+        return price != null && price > 0 && price <= budget;
+      });
+    }
 
     const sorted = [...result];
+    const priceInSelectedCurrency = (car: Car) => currency === 'RUB' && cnyToRubRate ? car.priceCny * cnyToRubRate : car.priceCny;
     switch (sort) {
-      case 'price_asc': sorted.sort((a, b) => a.priceCny - b.priceCny); break;
-      case 'price_desc': sorted.sort((a, b) => b.priceCny - a.priceCny); break;
+      case 'price_asc': sorted.sort((a, b) => priceInSelectedCurrency(a) - priceInSelectedCurrency(b)); break;
+      case 'price_desc': sorted.sort((a, b) => priceInSelectedCurrency(b) - priceInSelectedCurrency(a)); break;
       case 'year_desc': sorted.sort((a, b) => (b.year || 0) - (a.year || 0)); break;
       case 'year_asc': sorted.sort((a, b) => (a.year || 0) - (b.year || 0)); break;
       case 'brand_az': sorted.sort((a, b) => englishBrand(a.brand, a.brandZh).localeCompare(englishBrand(b.brand, b.brandZh))); break;
     }
     return sorted;
-  }, [cars, filter, brandFilter, modelFilter, sort]);
+  }, [cars, filter, brandFilter, modelFilter, sort, currency, cnyToRubRate, maxBudget]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const visibleCars = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -78,7 +103,12 @@ export default function Catalog({ cars, source, loading = false, unavailable = f
       <select value={sort} onChange={(e) => changeSort(e.target.value as SortOption)} aria-label="Сортировка">
         {(Object.keys(SORT_LABELS) as SortOption[]).map((key) => <option key={key} value={key}>{SORT_LABELS[key]}</option>)}
       </select>
-      {(brandFilter !== 'all' || modelFilter !== 'all') && <button className="page-button" onClick={() => { changeBrand('all'); }}>✕ Сбросить марку/модель</button>}
+      <div className="catalog-currency" role="group" aria-label="Валюта цены">
+        <button className={currency === 'CNY' ? 'active' : ''} onClick={() => { setCurrency('CNY'); setPage(1); }}>CNY ¥</button>
+        <button className={currency === 'RUB' ? 'active' : ''} onClick={() => { setCurrency('RUB'); setPage(1); }} disabled={!cnyToRubRate}>RUB ₽</button>
+      </div>
+      <label className="catalog-budget">До <input type="number" min="0" step="1000" inputMode="numeric" value={maxBudget} onChange={(e) => { setMaxBudget(e.target.value); setPage(1); }} placeholder={currency === 'RUB' ? 'бюджет в ₽' : 'бюджет в ¥'} aria-label={`Максимальный бюджет в ${currency}`} /> {currency === 'RUB' ? '₽' : '¥'}</label>
+      {(brandFilter !== 'all' || modelFilter !== 'all' || maxBudget) && <button className="page-button" onClick={() => { changeBrand('all'); setMaxBudget(''); }}>✕ Сбросить фильтры</button>}
     </div>
     {loading ? <div className="catalog-loading" role="status"><div className="loader-ring" /><p>Загружаем полный каталог автомобилей…</p></div> : <div className="car-grid-v2">{visibleCars.map((car) => {
       const brand = englishBrand(car.brand, car.brandZh);
@@ -88,7 +118,7 @@ export default function Catalog({ cars, source, loading = false, unavailable = f
           <img src={car.image} alt={`${brand} ${model}`} loading="lazy" decoding="async" />
           <span className="car-condition">{car.category === 'new' ? 'NEW' : 'VERIFIED'}</span><span className="car-year">{car.year || '—'}</span>
         </button>
-        <div className="car-card-content"><p className="car-brand-v2">{brand}</p><h3>{model}</h3><p className="car-trim-v2">{car.engineVolume || 'Engine'} <span>·</span> {car.driveType || 'Drive'} <span>·</span> {car.mileageKm ? `${car.mileageKm.toLocaleString('ru-RU')} km` : 'Mileage on request'}</p><div className="car-card-footer"><div><small>С доставкой до Уссурийска</small><strong>{formatCny(car.priceCny)}</strong></div><button className="card-arrow" onClick={(e) => { e.stopPropagation(); setSelectedCar(car); }}>↗</button></div></div>
+        <div className="car-card-content"><p className="car-brand-v2">{brand}</p><h3>{model}</h3><p className="car-trim-v2">{car.engineVolume || 'Engine'} <span>·</span> {car.driveType || 'Drive'} <span>·</span> {car.mileageKm ? `${car.mileageKm.toLocaleString('ru-RU')} km` : 'Mileage on request'}</p><div className="car-card-footer"><div><small>С доставкой до Уссурийска</small><strong>{currency === 'RUB' && cnyToRubRate && car.priceCny > 0 ? `₽${Math.round(car.priceCny * cnyToRubRate).toLocaleString('ru-RU')}` : formatCny(car.priceCny)}</strong>{currency === 'CNY' && cnyToRubRate && car.priceCny > 0 && <span className="car-rub-price">≈ ₽{Math.round(car.priceCny * cnyToRubRate).toLocaleString('ru-RU')}</span>}{currency === 'RUB' && !cnyToRubRate && <span className="car-rub-price">Получаем курс…</span>}</div><button className="card-arrow" onClick={(e) => { e.stopPropagation(); setSelectedCar(car); }}>↗</button></div></div>
       </article>;
     })}</div>}
     {!loading && visibleCars.length === 0 && <div className="empty-state"><h3>{unavailable ? 'Каталог временно загружается' : 'Автомобили не найдены'}</h3><p>{unavailable ? 'Нажмите «Повторить» выше — сайт не показывает пустой каталог при временном сбое связи.' : 'Попробуйте выбрать другой фильтр или повторите загрузку.'}</p></div>}

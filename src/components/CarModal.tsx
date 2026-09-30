@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Car, descriptionFeatures, englishBrand, englishModel, formatCny } from '../data/cars';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import {
@@ -21,8 +21,12 @@ function fmtRub(n: number): string {
 export default function CarModal({ car, onClose }: CarModalProps) {
   const images = car.images?.length ? car.images : [car.image];
   const [activeImage, setActiveImage] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxZoom, setLightboxZoom] = useState(1);
+  const [lightboxPan, setLightboxPan] = useState({ x: 0, y: 0 });
   const thumbsRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
+  const lightboxTouch = useRef<{ startX: number; startY: number; lastX: number; lastY: number; startZoom: number; startDistance: number | null; startPan: { x: number; y: number } } | null>(null);
 
   const [calcStatus, setCalcStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [calcResult, setCalcResult] = useState<CalculationResult | CalculationNeedsData | null>(null);
@@ -56,6 +60,78 @@ export default function CarModal({ car, onClose }: CarModalProps) {
   }
   function goPrev() { goTo(activeImage - 1); }
   function goNext() { goTo(activeImage + 1); }
+
+  function openLightbox() {
+    setLightboxZoom(1);
+    setLightboxPan({ x: 0, y: 0 });
+    setLightboxOpen(true);
+  }
+
+  function closeLightbox() {
+    setLightboxOpen(false);
+    setLightboxZoom(1);
+    setLightboxPan({ x: 0, y: 0 });
+  }
+
+  function toggleLightboxZoom() {
+    setLightboxZoom((value) => value > 1 ? 1 : 2);
+    setLightboxPan({ x: 0, y: 0 });
+  }
+
+  function distanceBetweenTouches(touches: React.TouchList): number {
+    const first = touches[0];
+    const second = touches[1];
+    return Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
+  }
+
+  function onLightboxTouchStart(e: React.TouchEvent) {
+    const first = e.touches[0];
+    lightboxTouch.current = {
+      startX: first.clientX,
+      startY: first.clientY,
+      lastX: first.clientX,
+      lastY: first.clientY,
+      startZoom: lightboxZoom,
+      startDistance: e.touches.length > 1 ? distanceBetweenTouches(e.touches) : null,
+      startPan: lightboxPan,
+    };
+  }
+
+  function onLightboxTouchMove(e: React.TouchEvent) {
+    const gesture = lightboxTouch.current;
+    if (!gesture) return;
+    e.preventDefault();
+    const first = e.touches[0];
+    gesture.lastX = first.clientX;
+    gesture.lastY = first.clientY;
+    if (e.touches.length > 1 && gesture.startDistance) {
+      const nextZoom = Math.min(3, Math.max(1, gesture.startZoom * distanceBetweenTouches(e.touches) / gesture.startDistance));
+      setLightboxZoom(nextZoom);
+      if (nextZoom === 1) setLightboxPan({ x: 0, y: 0 });
+    } else if (gesture.startZoom > 1) {
+      setLightboxPan({ x: gesture.startPan.x + first.clientX - gesture.startX, y: gesture.startPan.y + first.clientY - gesture.startY });
+    }
+  }
+
+  function onLightboxTouchEnd() {
+    const gesture = lightboxTouch.current;
+    if (!gesture) return;
+    if (gesture.startZoom === 1 && Math.abs(gesture.lastX - gesture.startX) > 50) {
+      gesture.lastX > gesture.startX ? goPrev() : goNext();
+    }
+    lightboxTouch.current = null;
+  }
+
+  useEffect(() => {
+    if (!lightboxOpen) return undefined;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') closeLightbox();
+      if (event.key === 'ArrowLeft') goPrev();
+      if (event.key === 'ArrowRight') goNext();
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [lightboxOpen, activeImage, images.length]);
 
   function onTouchStart(e: React.TouchEvent) { touchStartX.current = e.touches[0].clientX; }
   function onTouchEnd(e: React.TouchEvent) {
@@ -173,12 +249,15 @@ export default function CarModal({ car, onClose }: CarModalProps) {
   if (!specRows.length && car.specs) Object.entries(car.specs).forEach(([key, value]) => specRows.push([key, value]));
   const features = descriptionFeatures(car.description);
 
-  return <div className="modal-backdrop" onClick={onClose}>
+  return <><div className="modal-backdrop" onClick={onClose}>
     <div className="modal" onClick={(event) => event.stopPropagation()}>
       <div className="modal-head"><h3>{englishBrand(car.brand, car.brandZh)} {englishModel(car.model)} {car.year || ''}</h3><button className="modal-close" onClick={onClose} aria-label="Закрыть">×</button></div>
       <div className="modal-content">
         <div style={{ position: 'relative' }} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-          <img className="modal-main-image" src={images[activeImage]} alt={`${englishBrand(car.brand, car.brandZh)} ${englishModel(car.model)}`} />
+          <button className="modal-image-button" onClick={openLightbox} aria-label="Открыть фото на весь экран">
+            <img className="modal-main-image" src={images[activeImage]} alt={`${englishBrand(car.brand, car.brandZh)} ${englishModel(car.model)}`} />
+            <span className="modal-image-hint">Нажмите для увеличения</span>
+          </button>
           {images.length > 1 && <>
             <button onClick={goPrev} aria-label="Предыдущее фото" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, borderRadius: '50%', border: 0, background: 'rgba(21,37,43,.55)', color: '#fff', fontSize: 20, cursor: 'pointer' }}>‹</button>
             <button onClick={goNext} aria-label="Следующее фото" style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, borderRadius: '50%', border: 0, background: 'rgba(21,37,43,.55)', color: '#fff', fontSize: 20, cursor: 'pointer' }}>›</button>
@@ -245,5 +324,17 @@ export default function CarModal({ car, onClose }: CarModalProps) {
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 24, flexWrap: 'wrap' }}><a className="button-ghost" style={{ color: '#0d6470', border: '1px solid #0d6470' }} href={`https://t.me/Binhaiauto_bot?start=${car.id}`} target="_blank" rel="noreferrer">Или через Telegram-бота ↗</a></div>
       </div>
     </div>
-  </div>;
+  </div>
+  {lightboxOpen && <div className="photo-lightbox" role="dialog" aria-modal="true" aria-label="Галерея фотографий" onClick={closeLightbox}>
+    <div className="photo-lightbox-toolbar"><span>{activeImage + 1} / {images.length}</span><button className="photo-lightbox-close" onClick={closeLightbox} aria-label="Закрыть галерею">×</button></div>
+    <div className="photo-lightbox-stage" onClick={(event) => event.stopPropagation()} onTouchStart={onLightboxTouchStart} onTouchMove={onLightboxTouchMove} onTouchEnd={onLightboxTouchEnd} onDoubleClick={toggleLightboxZoom}>
+      <img className="photo-lightbox-image" src={images[activeImage]} alt={`${englishBrand(car.brand, car.brandZh)} ${englishModel(car.model)}`} style={{ transform: `translate(${lightboxPan.x}px, ${lightboxPan.y}px) scale(${lightboxZoom})` }} draggable={false} />
+    </div>
+    {images.length > 1 && <>
+      <button className="photo-lightbox-arrow photo-lightbox-prev" onClick={goPrev} aria-label="Предыдущее фото">‹</button>
+      <button className="photo-lightbox-arrow photo-lightbox-next" onClick={goNext} aria-label="Следующее фото">›</button>
+    </>}
+    <div className="photo-lightbox-help">Свайп — сменить фото · два пальца или двойное нажатие — увеличить</div>
+  </div>}
+  </>;
 }
