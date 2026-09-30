@@ -156,6 +156,8 @@ const ENGLISH_BRANDS: Record<string, string> = {
 export function englishBrand(brand: string, brandZh?: string): string {
   for (const candidate of [brandZh, brand].filter(Boolean) as string[]) {
     const normalized = candidate.trim().toLowerCase();
+    // Источник иногда отдаёт варианты вроде Mercedes-Benz-bents/benz.
+    if (normalized.includes('mercedes') || normalized.includes('奔驰') || normalized.includes('мерседес')) return 'Mercedes-Benz';
     if (ENGLISH_BRANDS[normalized]) return ENGLISH_BRANDS[normalized];
   }
   return transliterateCyrillic(brand

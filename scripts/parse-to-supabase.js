@@ -357,6 +357,10 @@ function splitTitle(title) {
     model = words.slice(1).join(' ');
   }
 
+  // Источник иногда отдаёт ошибочные варианты бренда:
+  // Mercedes-Benz-bents, Mercedes-Benz-benz и т.п.
+  if (/mercedes|奔驰|мерседес/i.test(brand)) brand = 'Mercedes-Benz';
+
   const trim = yearMatch
     ? title
         .slice(title.indexOf(yearMatch[0]) + yearMatch[0].length)
