@@ -13,7 +13,7 @@ export const DEFAULT_CONTACTS: SiteContacts = {
   whatsapp: '+79140708006',
   wechat: 'Arkady_lee',
   email: 'binhaiexport@gmail.com',
-  address: 'Уссурийск · Приморский край',
+  address: 'Суйфэньхэ · Китай',
 };
 
 export async function loadContacts(): Promise<SiteContacts> {

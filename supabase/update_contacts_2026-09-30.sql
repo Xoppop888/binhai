@@ -7,7 +7,7 @@ set contacts = jsonb_build_object(
   'whatsapp', '+79140708006',
   'wechat', 'Arkady_lee',
   'email', 'binhaiexport@gmail.com',
-  'address', coalesce(contacts->>'address', 'Уссурийск · Приморский край')
+  'address', 'Суйфэньхэ · Китай'
 ),
 updated_at = now()
 where id = 'main';
