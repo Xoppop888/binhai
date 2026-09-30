@@ -243,44 +243,41 @@ export async function loadCars(): Promise<{ cars: Car[]; syncedAt: string; fromA
   // не должен скрывать новые записи после запуска парсера.
 
   if (isPublicSupabaseConfigured()) {
-    try {
-      const res = await publicSupabaseFetch('/cars?select=*&order=price_cny.asc', {
-        // select=* уже включает новые колонки (images, specs, description, ...)
-        headers: { 'Content-Type': 'application/json' },
-      });
-      
-      if (res.ok) {
-        const rows = await res.json() as any[];
-        const cars = rows.map(mapSupabaseRowToCar);
-        
-        if (cars.length > 0) {
-          // Кэшируем результат
-          localStorage.setItem('binhai_cars_cache', JSON.stringify(cars));
-          localStorage.setItem('binhai_cars_cache_time', Date.now().toString());
-          
-          return { 
-            cars, 
-            syncedAt: new Date().toISOString(), 
-            fromApi: true,
-            source: 'supabase'
-          };
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const res = await publicSupabaseFetch('/cars?select=*&order=price_cny.asc', {
+          // select=* уже включает новые колонки (images, specs, description, ...)
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (res.ok) {
+          const rows = await res.json() as any[];
+          const cars = rows.map(mapSupabaseRowToCar);
+
+          // Пустой успешный ответ считаем сбоем, а не новым каталогом.
+          if (cars.length > 0) {
+            localStorage.setItem('binhai_cars_cache', JSON.stringify(cars));
+            localStorage.setItem('binhai_cars_cache_time', Date.now().toString());
+            return { cars, syncedAt: new Date().toISOString(), fromApi: true, source: 'supabase' };
+          }
         }
-      } else {
-        console.warn('Supabase returned no cars; using cache or fallback.');
+        console.warn(`Supabase returned an empty/invalid catalog (attempt ${attempt}/2).`);
+      } catch (error) {
+        console.warn(`Supabase load failed (attempt ${attempt}/2).`, error);
       }
-    } catch (error) {
-      console.warn('Supabase load failed, using fallback...', error);
+      if (attempt === 1) await new Promise((resolve) => setTimeout(resolve, 700));
     }
   }
 
-  // Если Supabase не настроен или временно недоступен — проверяем кэш.
+  // Если Supabase временно недоступен — используем последний непустой кэш,
+  // даже если ему больше часа. Устаревший каталог лучше пустого экрана.
   const cached = localStorage.getItem('binhai_cars_cache');
   const cachedTime = localStorage.getItem('binhai_cars_cache_time');
-  if (cached && cachedTime && Date.now() - parseInt(cachedTime) < 3600000) {
+  if (cached && cachedTime) {
     try {
       const cars = JSON.parse(cached) as Car[];
       if (Array.isArray(cars) && cars.length > 0) {
-        return { cars, syncedAt: new Date(parseInt(cachedTime)).toISOString(), fromApi: false, source: 'cache' };
+        return { cars, syncedAt: new Date(parseInt(cachedTime)).toISOString(), fromApi: false, source: 'stale-cache' };
       }
     } catch {
       localStorage.removeItem('binhai_cars_cache');

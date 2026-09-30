@@ -20,19 +20,26 @@ export default function SitePage() {
     setLoading(true);
     setError('');
     try {
-      const [result, siteContacts] = await Promise.all([loadCars(), loadContacts()]);
-      if (!result.cars.length || result.source === 'fallback') throw new Error('Полный каталог недоступен');
-      setCars(result.cars);
-      setSource(result.source);
-      setContacts(siteContacts);
+      // Каталог и контакты независимы: сбой одного не должен стирать другое.
+      const [result, contactsResult] = await Promise.allSettled([loadCars(), loadContacts()]);
+      if (result.status === 'fulfilled' && result.value.cars.length && result.value.source !== 'fallback') {
+        setCars(result.value.cars);
+        setSource(result.value.source);
+      } else if (result.status === 'rejected') {
+        throw result.reason;
+      } else if (!cars.length) {
+        throw new Error('Каталог временно недоступен');
+      }
+      if (contactsResult.status === 'fulfilled') setContacts(contactsResult.value);
     } catch {
-      setCars([]);
-      setSource('');
-      setError('Не удалось загрузить полный каталог. Проверьте соединение и повторите попытку.');
+      // Не очищаем cars: пользователь продолжает видеть последний рабочий каталог.
+      setError(cars.length
+        ? 'Показываем последний сохранённый каталог. Обновим данные автоматически при следующей попытке.'
+        : 'Каталог временно недоступен. Проверьте соединение и повторите попытку.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [cars.length]);
 
   useEffect(() => {
     void refreshCatalog();
@@ -43,7 +50,7 @@ export default function SitePage() {
     <main>
       <Hero contacts={contacts} />
       {error && <div className="container error-banner">{error} <button className="page-button" onClick={() => void refreshCatalog()}>Повторить</button></div>}
-      <Catalog cars={cars} source={source} loading={loading} />
+      <Catalog cars={cars} source={source} loading={loading} unavailable={!loading && !cars.length && Boolean(error)} />
       <AboutSection />
       <Footer contacts={contacts} />
     </main>
