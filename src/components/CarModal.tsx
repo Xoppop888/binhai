@@ -11,14 +11,14 @@ import {
   type FuelType,
 } from '../lib/siteCustomsCalculator';
 
-interface CarModalProps { car: Car; onClose: () => void; }
+interface CarModalProps { car: Car; cnyToRubRate?: number | null; onClose: () => void; }
 const SPEC_LABELS: Record<string, string> = { vin: 'VIN / номер кузова', color: 'Цвет', driveType: 'Привод', releaseDate: 'Дата выпуска', mileageKm: 'Пробег', engineVolume: 'Объём двигателя', keysCount: 'Ключи', bodyCondition: 'Состояние кузова', insuranceUntil: 'Страховка ОСАГО' };
 
 function fmtRub(n: number): string {
   return Math.round(n).toLocaleString('ru-RU') + ' ₽';
 }
 
-export default function CarModal({ car, onClose }: CarModalProps) {
+export default function CarModal({ car, cnyToRubRate = null, onClose }: CarModalProps) {
   const images = car.images?.length ? car.images : [car.image];
   const [activeImage, setActiveImage] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -265,7 +265,7 @@ export default function CarModal({ car, onClose }: CarModalProps) {
           </>}
         </div>
         {images.length > 1 && <div ref={thumbsRef} onWheel={onThumbsWheel} style={{ display: 'flex', gap: 8, marginTop: 12, overflowX: 'auto' }}>{images.map((src, index) => <button key={src + index} onClick={() => goTo(index)} style={{ width: 76, height: 52, padding: 0, border: index === activeImage ? '2px solid #0c6b78' : '2px solid transparent', borderRadius: 8, overflow: 'hidden', flexShrink: 0 }}><img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></button>)}</div>}
-        <div style={{ marginTop: 20, color: '#7a878d', fontSize: 12 }}>Стоимость с доставкой до Уссурийска</div><div className="modal-price">{formatCny(car.priceCny)}</div>
+        <div style={{ marginTop: 20, color: '#7a878d', fontSize: 12 }}>Стоимость с доставкой до Уссурийска</div><div className="modal-price">{formatCny(car.priceCny)}{cnyToRubRate && car.priceCny > 0 && <span className="modal-rub-price">≈ ₽{Math.round(car.priceCny * cnyToRubRate).toLocaleString('ru-RU')}</span>}</div>
         {specRows.length > 0 && <dl className="spec-grid">{specRows.map(([label, value]) => <div className="spec-row" key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>}
         {features.length > 0 && <div style={{ marginTop: 26 }}><h4 style={{ margin: '0 0 12px', fontFamily: 'Manrope, sans-serif' }}>Комплектация автомобиля</h4><ul className="feature-list">{features.map((feature) => <li key={feature}>✓ {feature}</li>)}</ul></div>}
 

@@ -33,3 +33,5 @@
 .catalog-budget{display:flex;align-items:center;gap:6px;color:#718087;font-size:13px;white-space:nowrap}
 .catalog-budget input{width:132px;padding:10px 11px;border:1px solid #d8dee1;border-radius:8px;background:#fff;color:var(--navy);font:inherit}
 @media(max-width:820px){.catalog-budget{width:100%}.catalog-budget input{flex:1;width:auto}}
+
+.modal-rub-price{display:block;margin-top:4px;color:var(--blue);font:700 16px DM Sans;letter-spacing:0}

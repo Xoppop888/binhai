@@ -123,5 +123,5 @@ export default function Catalog({ cars, source, loading = false, unavailable = f
     })}</div>}
     {!loading && visibleCars.length === 0 && <div className="empty-state"><h3>{unavailable ? 'Каталог временно загружается' : 'Автомобили не найдены'}</h3><p>{unavailable ? 'Нажмите «Повторить» выше — сайт не показывает пустой каталог при временном сбое связи.' : 'Попробуйте выбрать другой фильтр или повторите загрузку.'}</p></div>}
     {!loading && pageCount > 1 && <div className="pagination-v2"><button className="page-button" disabled={page === 1} onClick={() => { setPage((v) => v - 1); scrollCatalog(); }}>← Назад</button><span><b>{page}</b> / {pageCount}</span><button className="page-button" disabled={page === pageCount} onClick={() => { setPage((v) => v + 1); scrollCatalog(); }}>Вперёд →</button></div>}
-  </div>{selectedCar && <CarModal car={selectedCar} onClose={() => setSelectedCar(null)} />}</section>;
+  </div>{selectedCar && <CarModal car={selectedCar} cnyToRubRate={cnyToRubRate} onClose={() => setSelectedCar(null)} />}</section>;
 }
