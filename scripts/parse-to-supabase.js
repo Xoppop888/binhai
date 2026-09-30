@@ -197,11 +197,40 @@ function parsePriceCny(str) {
 function parsePowerHp(str) {
   if (!str) return null;
   const value = String(str).replace(',', '.');
-  const kw = value.match(/(\d+(?:\.\d+)?)\s*(?:kw|квт)/i);
+  const kw = value.match(/(\d+(?:\.\d+)?)\s*(?:kw|квт|千瓦)/i);
   if (kw) return Math.round(Number(kw[1]) * 1.3596216173);
   const hp = value.match(/(\d+(?:\.\d+)?)\s*(?:hp|л\.?\s*с\.?|лс|马力|ps)/i);
-  return hp ? Math.round(Number(hp[1])) : null;
+  if (hp) return Math.round(Number(hp[1]));
+  // На части карточек ключ уже означает мощность, но единица измерения
+  // отсутствует: например, значение приходит просто как "117".
+  const bare = value.match(/^\s*(\d{2,3})(?:\.0+)?\s*$/);
+  return bare ? Math.round(Number(bare[1])) : null;
 }
+
+// Точечный справочник только для карточек, которые уже сверены по
+// комплектации/двигателю. Общий fallback намеренно отсутствует: если источник
+// не дал мощность и карточки нет в справочнике, оставляем NULL для аудита, а не
+// подставляем условные значения вроде 160 л.с.
+const VERIFIED_POWER_BY_SOURCE_ID = {
+  '1534864822785732608': 144,
+  '1537027874919419904': 156,
+  '1536689435174899712': 156,
+  '1527058121215381504': 100,
+  '1519107612204101632': 100,
+  '1526994662251499520': 100,
+  '1532018863786561536': 100,
+  '1532436140330774528': 100,
+  '1532429561645633536': 100,
+  '1532761761086894080': 147,
+  '1519251953232932864': 156,
+  '1532764195775508480': 156,
+  '1519096493753131008': 159,
+  '1532765634456326144': 159,
+  '1533780882885840896': 231,
+  '1529190694007803904': 204,
+  '1534258630649581568': 150,
+  '1536329286786617344': 150,
+};
 
 async function fetchDetail(url, categoryHint, retries = 2) {
   try {
@@ -375,6 +404,17 @@ async function main() {
 
   const supabase = DRY_RUN ? null : createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
+  // Не даём fallback-значению перезаписать ранее проверенную мощность.
+  const existingPowerBySourceId = new Map();
+  if (supabase) {
+    const { data, error } = await supabase.from('cars').select('source_id, power_hp').not('power_hp', 'is', null);
+    if (error) throw new Error(`Не удалось получить проверенные мощности: ${error.message}`);
+    for (const row of data || []) {
+      if (row.source_id && row.power_hp != null) existingPowerBySourceId.set(String(row.source_id), row.power_hp);
+    }
+    console.log(`🔒 Сохранено проверенных мощностей: ${existingPowerBySourceId.size}`);
+  }
+
   let links;
   if (RESTORE_FROM_DB) {
     const { data, error } = await supabase
@@ -439,6 +479,10 @@ async function main() {
       engine_volume: detail.engineVolume,
     });
 
+    const preservedPowerHp = detail.sourceId ? existingPowerBySourceId.get(String(detail.sourceId)) : null;
+    const referencedPowerHp = detail.sourceId ? VERIFIED_POWER_BY_SOURCE_ID[String(detail.sourceId)] : null;
+    const powerHp = detail.powerHp ?? preservedPowerHp ?? referencedPowerHp ?? null;
+
     const row = {
       slug,
       source_id: detail.sourceId,
@@ -464,9 +508,9 @@ async function main() {
       body_condition: detail.bodyCondition,
       insurance_until: detail.insuranceUntil,
       fuel_type: fuelType,
-      // Часть карточек источника не содержит мощность. Не отправляем null,
-      // чтобы upsert не затирал вручную проверенное значение в Supabase.
-      ...(detail.powerHp != null ? { power_hp: detail.powerHp } : {}),
+      // Не затираем и не выдумываем мощность: сначала значение источника,
+      // затем сохранённое в Supabase, затем только точечный справочник.
+      ...(powerHp != null ? { power_hp: powerHp } : {}),
     };
 
     results.push(row);
