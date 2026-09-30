@@ -29,6 +29,6 @@ create policy "site_settings_admin_write"
 insert into public.site_settings (id, contacts)
 values (
   'main',
-  '{"telegram":"https://t.me/binhai_bot","whatsapp":"+86 158 4019 9999","wechat":"13766611716","email":"576909777@qq.com","address":"Уссурийск · Приморский край"}'::jsonb
+  '{"telegram":"https://t.me/binhaiauto_bot","whatsapp":"+79140708006","wechat":"Arkady_lee","email":"binhaiexport@gmail.com","address":"Уссурийск · Приморский край"}'::jsonb
 )
 on conflict (id) do nothing;
