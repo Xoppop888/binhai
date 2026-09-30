@@ -194,6 +194,7 @@ const MODEL_REPLACEMENTS: Array<[RegExp, string]> = [
   [/пежо/gi, 'Peugeot'],
   [/шкода/gi, 'Skoda'],
   [/рапид/gi, 'Rapid'],
+  [/акселер(?:а|ы)?/gi, 'Axela'],
   [/аксела/gi, 'Axela'],
   [/сильфи/gi, 'Sylphy'],
   [/силфи/gi, 'Sylphy'],

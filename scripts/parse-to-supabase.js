@@ -364,6 +364,12 @@ function splitTitle(title) {
         .trim()
     : '';
 
+  // Китайское/русское название «Аксела/Акселера» — это Mazda Axela.
+  // Нормализуем до записи, чтобы парсер не создавал вариант Akselera.
+  model = model
+    .replace(/акселер(?:а|ы)?/gi, 'Axela')
+    .replace(/аксела/gi, 'Axela');
+
   return { brand, model, year, trim };
 }
 
