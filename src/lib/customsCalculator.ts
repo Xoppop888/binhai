@@ -9,7 +9,7 @@
 // совпадают. Осталась одна открытая ветка: авто МЛАДШЕ 3 лет (пошлина по
 // проценту от таможенной стоимости) и электромобили — не реализованы ниже.
 
-export type FuelType = 'ice' | 'hybrid' | 'ev' | 'unknown';
+export type FuelType = 'ice' | 'hybrid' | 'series_hybrid' | 'ev' | 'unknown';
 
 export interface CarForCalculation {
   priceCny: number;
@@ -278,12 +278,15 @@ function calculateEvDuty(car: CarForCalculation): CalculationNeedsData {
   };
 }
 
-export function calculateTurnkeyPrice(car: CarForCalculation, rates: Rates): CalculationResult | CalculationNeedsData {
+export function calculateTurnkeyPrice(
+  car: CarForCalculation,
+  rates: Rates,
+  now = new Date(),
+): CalculationResult | CalculationNeedsData {
   if (car.fuelType === 'unknown') {
     return { ok: false, reason: 'Тип силовой установки не определён — требуется ручная проверка' };
   }
 
-  const now = new Date();
   const ageYears = car.ageYears ?? resolveAgeYears(car, now);
   const carPriceRub = car.priceCny * rates.cnyToRub;
   const bankCommissionRub = carPriceRub * BANK_COMMISSION_RATE;

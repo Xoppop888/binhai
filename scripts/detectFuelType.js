@@ -37,15 +37,27 @@ const HYBRID_KEYWORDS = [
   /油电混动/,
 ];
 
+const SERIES_HYBRID_KEYWORDS = [
+  /последовательн(?:ый|ого)\s+гибрид/i,
+  /series[-\s]?hybrid/i,
+  /增程式混动/,
+  /增程式电动/,
+  /range[-\s]?extended/i,
+];
+
 /**
  * @param {{ title?: string, description?: string, engine_volume?: string | number | null }} car
- * @returns {{ fuelType: 'ev' | 'hybrid' | 'ice' | 'unknown', needsReview: boolean }}
+ * @returns {{ fuelType: 'ev' | 'hybrid' | 'series_hybrid' | 'ice' | 'unknown', needsReview: boolean }}
  */
 export function detectFuelType(car) {
   const text = `${car.title ?? ''} ${car.description ?? ''}`;
 
   if (EV_KEYWORDS.some((re) => re.test(text))) {
     return { fuelType: 'ev', needsReview: true };
+  }
+
+  if (SERIES_HYBRID_KEYWORDS.some((re) => re.test(text))) {
+    return { fuelType: 'series_hybrid', needsReview: true };
   }
 
   if (HYBRID_KEYWORDS.some((re) => re.test(text))) {
