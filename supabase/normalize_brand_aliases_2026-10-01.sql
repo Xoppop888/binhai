@@ -151,6 +151,29 @@ set model = '3 Axela'
 where brand = 'Mazda'
   and lower(coalesce(model, '')) like '%3%axela%';
 
+update public.cars
+set brand = case
+  when lower(trim(coalesce(brand, ''))) = 'kia' then 'Kia'
+  when lower(trim(coalesce(brand, ''))) = 'шевроле' then 'Chevrolet'
+  else brand
+end
+where lower(trim(coalesce(brand, ''))) in ('kia', 'шевроле');
+
+update public.cars
+set model = case
+  when lower(trim(coalesce(model, ''))) = 'a‑класс' then 'A-Class'
+  when lower(trim(coalesce(model, ''))) = 'левин' then 'Levin'
+  when lower(trim(coalesce(model, ''))) = 'яpис l x' or lower(trim(coalesce(model, ''))) = 'ярис l x' then 'Yaris L X'
+  when lower(trim(coalesce(model, ''))) like 'tiggo 8%' then 'Tiggo 8'
+  when lower(trim(coalesce(model, ''))) like '2008%' then '2008'
+  when lower(trim(coalesce(model, ''))) like 'automobile binyue%' then trim(regexp_replace(model, '^Automobile[[:space:]]+', '', 1, 1, 'i'))
+  else model
+end
+where lower(trim(coalesce(model, ''))) in ('a‑класс', 'левин', 'ярис l x', 'яpис l x')
+   or lower(trim(coalesce(model, ''))) like 'tiggo 8%'
+   or lower(trim(coalesce(model, ''))) like '2008%'
+   or lower(trim(coalesce(model, ''))) like 'automobile binyue%';
+
 select brand, count(*) as cars_count
 from public.cars
 where lower(trim(coalesce(brand, ''))) in (

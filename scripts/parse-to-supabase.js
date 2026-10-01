@@ -364,6 +364,8 @@ function splitTitle(title) {
   else if (/^(jietu|jetour)$/i.test(brand) || /捷途|джетур/i.test(brand)) brand = 'Jetour';
   else if (/^(guangzhou|gac)$/i.test(brand) || /广汽|гуанчжоу/i.test(brand)) brand = 'GAC';
   else if (/^гавчи$/i.test(brand)) brand = 'GAC';
+  else if (/^kia$/i.test(brand)) brand = 'Kia';
+  else if (/^шевроле$/i.test(brand)) brand = 'Chevrolet';
   else if (/^baic$/i.test(brand) && /\bm7\b|руйшэн|ruisheng|вейцзя|wangpai/i.test(model)) brand = 'BAW';
   else if (/^(бьюик|буик)$/i.test(brand)) brand = 'Buick';
   else if (/^фольксваген$/i.test(brand)) brand = 'Volkswagen';
@@ -405,6 +407,9 @@ function splitTitle(title) {
     .replace(/рапид/gi, 'Rapid')
     .replace(/суперб/gi, 'Superb')
     .replace(/сильфи|силфи/gi, 'Sylphy')
+    .replace(/левин/gi, 'Levin')
+    .replace(/яри[сс]\s*l\s*x/gi, 'Yaris L X')
+    .replace(/^Automobile[\s,]+/i, '')
     .replace(/кх1/gi, 'KX1')
     .replace(/модель/gi, '')
     .replace(/\s*,\s*/g, ' ')

@@ -229,6 +229,8 @@ const MODEL_REPLACEMENTS: Array<[RegExp, string]> = [
   [/суперб/gi, 'Superb'],
   [/^3[\s‑–-]*(?:й|я)?[\s‑–-]*серии$/i, '3 Series'],
   [/^a[\s‑–-]*класс$/i, 'A-Class'],
+  [/^левин$/i, 'Levin'],
+  [/^яри[сс]\s*l\s*x$/i, 'Yaris L X'],
   [/эмгранд/gi, 'Emgrand'],
   [/джетта/gi, 'Jetta'],
   [/тиго/gi, 'Tiggo'],
@@ -261,6 +263,8 @@ export function canonicalCatalogModel(brand: string, model: string): string {
     .replace(/,?\s*model\b/gi, '')
     .replace(/,?\s*модель\b/gi, '')
     .replace(/^Auto[,\s]+/i, '')
+    .replace(/^Automobile[,\s]+/i, '')
+    .replace(/[,]+$/g, '')
     .replace(/\s+/g, ' ')
     .trim();
   if (brand === 'BAW' && /\bm7\b/i.test(normalizedModel)) return 'M7';
