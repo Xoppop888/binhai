@@ -363,6 +363,7 @@ function splitTitle(title) {
   else if (/^haval+$/i.test(brand) || /哈弗|хавал/i.test(brand)) brand = 'Haval';
   else if (/^(jietu|jetour)$/i.test(brand) || /捷途|джетур/i.test(brand)) brand = 'Jetour';
   else if (/^(guangzhou|gac)$/i.test(brand) || /广汽|гуанчжоу/i.test(brand)) brand = 'GAC';
+  else if (/^baic$/i.test(brand) && /\bm7\b|руйшэн|ruisheng|вейцзя|wangpai/i.test(model)) brand = 'BAW';
   // В текущем каталоге Beijing/Бэйцзин используется для Hyundai ix35.
   // Не меняем Beijing вслепую: BAIC — отдельный бренд.
   else if (/^(beijing|бэйцзин|пекинская?|北京)$/i.test(brand) && /hyundai|ix35|ix-35/i.test(model)) brand = 'Hyundai';

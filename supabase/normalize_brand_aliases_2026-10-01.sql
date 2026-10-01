@@ -37,6 +37,15 @@ where lower(trim(coalesce(brand, ''))) in ('beijing', 'beijing-hyundai', 'бэй
        or lower(coalesce(model, '')) like '%ix35%'
        or lower(coalesce(model, '')) like '%ix-35%');
 
+update public.cars
+set brand = 'BAW'
+where lower(trim(coalesce(brand, ''))) = 'baic'
+  and (lower(coalesce(model, '')) like '%m7%'
+       or lower(coalesce(model, '')) like '%руйшэн%'
+       or lower(coalesce(model, '')) like '%ruisheng%'
+       or lower(coalesce(model, '')) like '%вейцзя%'
+       or lower(coalesce(model, '')) like '%wangpai%');
+
 select brand, count(*) as cars_count
 from public.cars
 where lower(trim(coalesce(brand, ''))) in (

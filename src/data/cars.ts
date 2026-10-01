@@ -190,6 +190,12 @@ export function englishBrand(brand: string, brandZh?: string): string {
     .trim());
 }
 
+export function canonicalCatalogBrand(brand: string, model = '', brandZh?: string): string {
+  const normalizedBrand = englishBrand(brand, brandZh);
+  if (normalizedBrand === 'BAIC' && /\bm7\b|руйшэн|ruisheng|вейцзя|wangpai/i.test(model)) return 'BAW';
+  return normalizedBrand;
+}
+
 const MODEL_REPLACEMENTS: Array<[RegExp, string]> = [
   [/шевроле/gi, 'Chevrolet'],
   [/монза/gi, 'Monza'],
@@ -308,7 +314,7 @@ function mapSupabaseRowToCar(row: any): Car {
     && /hyundai|ix35|ix-35/i.test(String(rawModel));
   return {
     id: row.slug || row.id,
-    brand: isBeijingHyundai ? 'Hyundai' : englishBrand(rawBrand, row.brand_zh || ''),
+    brand: isBeijingHyundai ? 'Hyundai' : canonicalCatalogBrand(rawBrand, rawModel, row.brand_zh || ''),
     brandZh: row.brand_zh || '',
     model: englishModel(row.model || ''),
     year: row.year || 0,
