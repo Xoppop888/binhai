@@ -357,9 +357,15 @@ function splitTitle(title) {
     model = words.slice(1).join(' ');
   }
 
-  // Источник иногда отдаёт ошибочные варианты бренда:
-  // Mercedes-Benz-bents, Mercedes-Benz-benz и т.п.
+  // Источник иногда отдаёт варианты/опечатки бренда. Канонизируем их
+  // до записи, чтобы фильтр не создавал отдельные категории.
   if (/mercedes|奔驰|мерседес/i.test(brand)) brand = 'Mercedes-Benz';
+  else if (/^haval+$/i.test(brand) || /哈弗|хавал/i.test(brand)) brand = 'Haval';
+  else if (/^(jietu|jetour)$/i.test(brand) || /捷途|джетур/i.test(brand)) brand = 'Jetour';
+  else if (/^(guangzhou|gac)$/i.test(brand) || /广汽|гуанчжоу/i.test(brand)) brand = 'GAC';
+  // В текущем каталоге Beijing/Бэйцзин используется для Hyundai ix35.
+  // Не меняем Beijing вслепую: BAIC — отдельный бренд.
+  else if (/^(beijing|бэйцзин|пекинская?|北京)$/i.test(brand) && /hyundai|ix35|ix-35/i.test(model)) brand = 'Hyundai';
 
   const trim = yearMatch
     ? title

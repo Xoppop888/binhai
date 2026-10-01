@@ -112,7 +112,7 @@ const ENGLISH_BRANDS: Record<string, string> = {
   '丰田': 'Toyota', toyota: 'Toyota', тойота: 'Toyota',
   '本田': 'Honda', honda: 'Honda', хонда: 'Honda',
   '日产': 'Nissan', nissan: 'Nissan', ниссан: 'Nissan',
-  '哈弗': 'Haval', haval: 'Haval', хавал: 'Haval',
+  '哈弗': 'Haval', haval: 'Haval', havall: 'Haval', хавал: 'Haval', хавалл: 'Haval',
   '长城': 'GWM', greatwall: 'GWM', 'great wall': 'GWM',
   '比亚迪': 'BYD', byd: 'BYD',
   '奇瑞': 'Chery', chery: 'Chery', чери: 'Chery',
@@ -120,7 +120,7 @@ const ENGLISH_BRANDS: Record<string, string> = {
   '长安': 'Changan', changan: 'Changan', чанган: 'Changan',
   '五菱': 'Wuling', wuling: 'Wuling',
   '宝骏': 'Baojun', baojun: 'Baojun',
-  '广汽传祺': 'GAC Trumpchi', trumpchi: 'GAC Trumpchi',
+  '广汽传祺': 'GAC Trumpchi', trumpchi: 'GAC Trumpchi', gac: 'GAC', guangzhou: 'GAC', гуанчжоу: 'GAC',
   '领克': 'Lynk & Co', lynk: 'Lynk & Co',
   '蔚来': 'NIO', nio: 'NIO',
   '小鹏': 'XPeng', xpeng: 'XPeng',
@@ -136,6 +136,7 @@ const ENGLISH_BRANDS: Record<string, string> = {
   'форд': 'Ford',
   '特斯拉': 'Tesla', tesla: 'Tesla',
   '现代': 'Hyundai', hyundai: 'Hyundai', хендай: 'Hyundai',
+  jetour: 'Jetour', jietu: 'Jetour', 捷途: 'Jetour', джетур: 'Jetour', цзету: 'Jetour',
   '起亚': 'Kia', kia: 'Kia', киа: 'Kia',
   '雪佛兰': 'Chevrolet', chevrolet: 'Chevrolet',
   'шевроле': 'Chevrolet',
@@ -158,6 +159,9 @@ export function englishBrand(brand: string, brandZh?: string): string {
     const normalized = candidate.trim().toLowerCase();
     // Источник иногда отдаёт варианты вроде Mercedes-Benz-bents/benz.
     if (normalized.includes('mercedes') || normalized.includes('奔驰') || normalized.includes('мерседес')) return 'Mercedes-Benz';
+    if (/^haval+$/i.test(normalized) || normalized.includes('哈弗') || normalized.includes('хавал')) return 'Haval';
+    if (normalized === 'jietu' || normalized === 'jetour' || normalized.includes('捷途') || normalized.includes('джетур')) return 'Jetour';
+    if (normalized === 'guangzhou' || normalized === 'гуанчжоу' || normalized === 'gac') return 'GAC';
     if (ENGLISH_BRANDS[normalized]) return ENGLISH_BRANDS[normalized];
   }
   return transliterateCyrillic(brand
@@ -298,9 +302,13 @@ export async function loadCars(): Promise<{ cars: Car[]; syncedAt: string; fromA
 
 function mapSupabaseRowToCar(row: any): Car {
   const images: string[] = Array.isArray(row.images) ? row.images : [];
+  const rawModel = row.model || '';
+  const rawBrand = row.brand || '';
+  const isBeijingHyundai = /^(beijing|бэйцзин|пекинская?|北京)$/i.test(String(rawBrand).trim())
+    && /hyundai|ix35|ix-35/i.test(String(rawModel));
   return {
     id: row.slug || row.id,
-    brand: englishBrand(row.brand || '', row.brand_zh || ''),
+    brand: isBeijingHyundai ? 'Hyundai' : englishBrand(rawBrand, row.brand_zh || ''),
     brandZh: row.brand_zh || '',
     model: englishModel(row.model || ''),
     year: row.year || 0,
