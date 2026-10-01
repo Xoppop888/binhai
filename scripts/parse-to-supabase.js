@@ -363,7 +363,18 @@ function splitTitle(title) {
   else if (/^haval+$/i.test(brand) || /哈弗|хавал/i.test(brand)) brand = 'Haval';
   else if (/^(jietu|jetour)$/i.test(brand) || /捷途|джетур/i.test(brand)) brand = 'Jetour';
   else if (/^(guangzhou|gac)$/i.test(brand) || /广汽|гуанчжоу/i.test(brand)) brand = 'GAC';
+  else if (/^гавчи$/i.test(brand)) brand = 'GAC';
   else if (/^baic$/i.test(brand) && /\bm7\b|руйшэн|ruisheng|вейцзя|wangpai/i.test(model)) brand = 'BAW';
+  else if (/^(бьюик|буик)$/i.test(brand)) brand = 'Buick';
+  else if (/^фольксваген$/i.test(brand)) brand = 'Volkswagen';
+  else if (/^хавейл?$/i.test(brand)) brand = 'Haval';
+  else if (/^хонда$/i.test(brand)) brand = 'Honda';
+  else if (/^мазда$/i.test(brand)) brand = 'Mazda';
+  else if (/^мицубиси$/i.test(brand)) brand = 'Mitsubishi';
+  else if (/^ниссан$/i.test(brand)) brand = 'Nissan';
+  else if (/^пежо$/i.test(brand)) brand = 'Peugeot';
+  else if (/^шкода$/i.test(brand)) brand = 'Skoda';
+  else if (/^тойота$/i.test(brand)) brand = 'Toyota';
   // В текущем каталоге Beijing/Бэйцзин используется для Hyundai ix35.
   // Не меняем Beijing вслепую: BAIC — отдельный бренд.
   else if (/^(beijing|бэйцзин|пекинская?|北京)$/i.test(brand) && /hyundai|ix35|ix-35/i.test(model)) brand = 'Hyundai';
@@ -379,12 +390,34 @@ function splitTitle(title) {
   // Нормализуем до записи, чтобы парсер не создавал вариант Akselera.
   model = model
     .replace(/акселер(?:а|ы)?/gi, 'Axela')
-    .replace(/аксела/gi, 'Axela');
+    .replace(/аксела/gi, 'Axela')
+    .replace(/кашкай/gi, 'Qashqai')
+    .replace(/аутлендер|аутл[еэ]ндер/gi, 'Outlander')
+    .replace(/королла/gi, 'Corolla')
+    .replace(/гольф/gi, 'Golf')
+    .replace(/ламандо/gi, 'Lamando')
+    .replace(/сагитар/gi, 'Sagitar')
+    .replace(/везел/gi, 'Vezel')
+    .replace(/читу/gi, 'Chitu')
+    .replace(/кам[иі]к/gi, 'Kamiq')
+    .replace(/карок/gi, 'Karoq')
+    .replace(/октавия/gi, 'Octavia')
+    .replace(/рапид/gi, 'Rapid')
+    .replace(/суперб/gi, 'Superb')
+    .replace(/сильфи|силфи/gi, 'Sylphy')
+    .replace(/кх1/gi, 'KX1')
+    .replace(/модель/gi, '')
+    .replace(/\s*,\s*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 
   if (brand === 'BAW' && /\bm7\b/i.test(model)) model = 'M7';
-  if (brand === 'GAC' && /^(trumpchi|chuanqi|чуаньци)\b/i.test(model)) {
+  if (brand === 'GAC' && /^(trumpchi|chuanqi|chuantsi|чуаньци)\b/i.test(model)) {
     brand = 'GAC Trumpchi';
-    model = model.replace(/^(trumpchi|chuanqi|чуаньци)\s*/i, '').trim();
+    model = model
+      .replace(/^(trumpchi|chuanqi|chuantsi|чуаньци)\s*/i, '')
+      .replace(/^(trumpchi|chuanqi|chuantsi|чуаньци)\s*/i, '')
+      .trim();
   }
 
   return { brand, model, year, trim };

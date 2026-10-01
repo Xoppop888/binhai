@@ -149,9 +149,12 @@ const ENGLISH_BRANDS: Record<string, string> = {
   '凯迪拉克': 'Cadillac', cadillac: 'Cadillac',
   '保时捷': 'Porsche', porsche: 'Porsche',
   '三菱': 'Mitsubishi', mitsubishi: 'Mitsubishi',
+  мицубиси: 'Mitsubishi',
   '斯巴鲁': 'Subaru', subaru: 'Subaru',
   '五十铃': 'Isuzu', isuzu: 'Isuzu',
   'исузу': 'Isuzu',
+  бьюик: 'Buick', буик: 'Buick',
+  'хавей': 'Haval', 'хавейл': 'Haval', 'москвич': 'Moskvich',
 };
 
 export function englishBrand(brand: string, brandZh?: string): string {
@@ -193,7 +196,7 @@ export function englishBrand(brand: string, brandZh?: string): string {
 export function canonicalCatalogBrand(brand: string, model = '', brandZh?: string): string {
   const normalizedBrand = englishBrand(brand, brandZh);
   if (normalizedBrand === 'BAIC' && /\bm7\b|руйшэн|ruisheng|вейцзя|wangpai/i.test(model)) return 'BAW';
-  if (normalizedBrand === 'GAC' && /^(trumpchi|chuanqi|чуаньци)\b/i.test(model.trim())) return 'GAC Trumpchi';
+  if (normalizedBrand === 'GAC' && /^(trumpchi|chuanqi|chuantsi|чуаньци)\b/i.test(model.trim())) return 'GAC Trumpchi';
   return normalizedBrand;
 }
 
@@ -211,11 +214,22 @@ const MODEL_REPLACEMENTS: Array<[RegExp, string]> = [
   [/аксела/gi, 'Axela'],
   [/сильфи/gi, 'Sylphy'],
   [/силфи/gi, 'Sylphy'],
-  [/кх1/gi, 'KX1'],
+  [/кашкай/gi, 'Qashqai'],
+  [/аутлендер|аутл[еэ]ндер/gi, 'Outlander'],
+  [/левин/gi, 'Levin'],
+  [/ярос?с\s*l\s*x|яри[сс]\s*l\s*x/gi, 'Yaris L X'],
+  [/гольф/gi, 'Golf'],
+  [/ламандо/gi, 'Lamando'],
+  [/сагитар/gi, 'Sagitar'],
+  [/везел/gi, 'Vezel'],
+  [/читу/gi, 'Chitu'],
+  [/кам[иі]к/gi, 'Kamiq'],
+  [/карок/gi, 'Karoq'],
+  [/октавия/gi, 'Octavia'],
+  [/суперб/gi, 'Superb'],
   [/эмгранд/gi, 'Emgrand'],
   [/джетта/gi, 'Jetta'],
   [/тиго/gi, 'Tiggo'],
-  [/левин/gi, 'Levin'],
   [/синъяо/gi, 'Xinyao'],
   [/двойной\s+гибрид/gi, 'Dual Hybrid'],
   [/гибрид/gi, 'Hybrid'],
@@ -241,10 +255,18 @@ export function englishModel(model: string): string {
 }
 
 export function canonicalCatalogModel(brand: string, model: string): string {
-  const normalizedModel = englishModel(model);
+  let normalizedModel = englishModel(model)
+    .replace(/,?\s*model\b/gi, '')
+    .replace(/,?\s*модель\b/gi, '')
+    .replace(/^Auto[,\s]+/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
   if (brand === 'BAW' && /\bm7\b/i.test(normalizedModel)) return 'M7';
   if (brand === 'GAC Trumpchi') {
-    const withoutBrand = normalizedModel.replace(/^(trumpchi|chuanqi)\s*/i, '').trim();
+    const withoutBrand = normalizedModel
+      .replace(/^(trumpchi|chuanqi|chuantsi)\s*,?\s*/i, '')
+      .replace(/^(trumpchi|chuanqi|chuantsi)\s*,?\s*/i, '')
+      .trim();
     if (withoutBrand) return withoutBrand;
   }
   return normalizedModel;
