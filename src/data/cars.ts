@@ -193,6 +193,7 @@ export function englishBrand(brand: string, brandZh?: string): string {
 export function canonicalCatalogBrand(brand: string, model = '', brandZh?: string): string {
   const normalizedBrand = englishBrand(brand, brandZh);
   if (normalizedBrand === 'BAIC' && /\bm7\b|руйшэн|ruisheng|вейцзя|wangpai/i.test(model)) return 'BAW';
+  if (normalizedBrand === 'GAC' && /^(trumpchi|chuanqi|чуаньци)\b/i.test(model.trim())) return 'GAC Trumpchi';
   return normalizedBrand;
 }
 
@@ -237,6 +238,16 @@ export function englishModel(model: string): string {
   const replaced = MODEL_REPLACEMENTS.reduce((result, [pattern, replacement]) => result.replace(pattern, replacement), model).replace(/\s+/g, ' ').trim();
   const latin = transliterateCyrillic(replaced);
   return latin.replace(/^golf$/i, 'Golf').replace(/^sylphy$/i, 'Sylphy').replace(/^rapid$/i, 'Rapid');
+}
+
+export function canonicalCatalogModel(brand: string, model: string): string {
+  const normalizedModel = englishModel(model);
+  if (brand === 'BAW' && /\bm7\b/i.test(normalizedModel)) return 'M7';
+  if (brand === 'GAC Trumpchi') {
+    const withoutBrand = normalizedModel.replace(/^(trumpchi|chuanqi)\s*/i, '').trim();
+    if (withoutBrand) return withoutBrand;
+  }
+  return normalizedModel;
 }
 
 export const SYNC_META = {
@@ -312,11 +323,12 @@ function mapSupabaseRowToCar(row: any): Car {
   const rawBrand = row.brand || '';
   const isBeijingHyundai = /^(beijing|бэйцзин|пекинская?|北京)$/i.test(String(rawBrand).trim())
     && /hyundai|ix35|ix-35/i.test(String(rawModel));
+  const displayBrand = isBeijingHyundai ? 'Hyundai' : canonicalCatalogBrand(rawBrand, rawModel, row.brand_zh || '');
   return {
     id: row.slug || row.id,
-    brand: isBeijingHyundai ? 'Hyundai' : canonicalCatalogBrand(rawBrand, rawModel, row.brand_zh || ''),
+    brand: displayBrand,
     brandZh: row.brand_zh || '',
-    model: englishModel(row.model || ''),
+    model: canonicalCatalogModel(displayBrand, rawModel),
     year: row.year || 0,
     trim: row.trim || '',
     priceCny: row.price_cny || 0,

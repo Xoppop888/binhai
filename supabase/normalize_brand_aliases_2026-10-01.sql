@@ -1,5 +1,5 @@
 -- BINHAI AUTO: объединение вариантов брендов в каталоге.
--- Меняется только public.cars.brand; source_id, цены, фото и характеристики не затрагиваются.
+-- Меняются только public.cars.brand и public.cars.model; source_id, цены, фото и характеристики не затрагиваются.
 -- Beijing переводится в Hyundai только для записей с моделью Hyundai/ix35,
 -- потому что Beijing/BAIC сам по себе является отдельным брендом.
 
@@ -31,6 +31,17 @@ where lower(trim(coalesce(brand, ''))) in ('gac', 'guangzhou')
    or trim(coalesce(brand, '')) like '%广汽%';
 
 update public.cars
+set brand = 'GAC Trumpchi'
+where lower(trim(coalesce(brand, ''))) = 'gac'
+  and (lower(trim(coalesce(model, ''))) like 'trumpchi %'
+       or lower(trim(coalesce(model, ''))) like 'chuanqi %'
+       or trim(coalesce(model, '')) like '传祺 %');
+
+update public.cars
+set model = trim(regexp_replace(model, '^(Trumpchi|Chuanqi|чуаньци|传祺)[[:space:]]*', '', 1, 1, 'i'))
+where brand = 'GAC Trumpchi';
+
+update public.cars
 set brand = 'Hyundai'
 where lower(trim(coalesce(brand, ''))) in ('beijing', 'beijing-hyundai', 'бэйцзин', 'пекинская', 'пекин')
   and (lower(coalesce(model, '')) like '%hyundai%'
@@ -45,6 +56,11 @@ where lower(trim(coalesce(brand, ''))) = 'baic'
        or lower(coalesce(model, '')) like '%ruisheng%'
        or lower(coalesce(model, '')) like '%вейцзя%'
        or lower(coalesce(model, '')) like '%wangpai%');
+
+update public.cars
+set model = 'M7'
+where brand = 'BAW'
+  and lower(coalesce(model, '')) like '%m7%';
 
 select brand, count(*) as cars_count
 from public.cars

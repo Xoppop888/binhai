@@ -381,6 +381,12 @@ function splitTitle(title) {
     .replace(/акселер(?:а|ы)?/gi, 'Axela')
     .replace(/аксела/gi, 'Axela');
 
+  if (brand === 'BAW' && /\bm7\b/i.test(model)) model = 'M7';
+  if (brand === 'GAC' && /^(trumpchi|chuanqi|чуаньци)\b/i.test(model)) {
+    brand = 'GAC Trumpchi';
+    model = model.replace(/^(trumpchi|chuanqi|чуаньци)\s*/i, '').trim();
+  }
+
   return { brand, model, year, trim };
 }
 
