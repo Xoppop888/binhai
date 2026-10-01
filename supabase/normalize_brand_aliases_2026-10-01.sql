@@ -152,6 +152,11 @@ where brand = 'Mazda'
   and lower(coalesce(model, '')) like '%3%axela%';
 
 update public.cars
+set model = 'A 180 L'
+where brand = 'Mercedes-Benz'
+  and lower(replace(replace(trim(coalesce(model, '')), '‑', '-'), '–', '-')) in ('a-class', 'a-klass', 'a класс', 'a-класс');
+
+update public.cars
 set brand = case
   when lower(trim(coalesce(brand, ''))) = 'kia' then 'Kia'
   when lower(trim(coalesce(brand, ''))) = 'шевроле' then 'Chevrolet'

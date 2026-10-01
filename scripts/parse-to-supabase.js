@@ -417,6 +417,7 @@ function splitTitle(title) {
     .trim();
 
   if (brand === 'BAW' && /\bm7\b/i.test(model)) model = 'M7';
+  if (brand === 'Mercedes-Benz' && /^a[\s‑–-]*класс$/i.test(model)) model = 'A 180 L';
   if (brand === 'GAC' && /^(trumpchi|chuanqi|chuantsi|чуаньци)\b/i.test(model)) {
     brand = 'GAC Trumpchi';
     model = model

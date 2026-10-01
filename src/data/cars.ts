@@ -268,6 +268,7 @@ export function canonicalCatalogModel(brand: string, model: string): string {
     .replace(/\s+/g, ' ')
     .trim();
   if (brand === 'BAW' && /\bm7\b/i.test(normalizedModel)) return 'M7';
+  if (brand === 'Mercedes-Benz' && /^A-Class$/i.test(normalizedModel)) return 'A 180 L';
   if (brand === 'Hyundai') normalizedModel = normalizedModel.replace(/^Hyundai\s+/i, '').trim();
   if (brand === 'GAC Trumpchi') {
     const withoutBrand = normalizedModel
