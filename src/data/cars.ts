@@ -196,7 +196,8 @@ export function englishBrand(brand: string, brandZh?: string): string {
 export function canonicalCatalogBrand(brand: string, model = '', brandZh?: string): string {
   const normalizedBrand = englishBrand(brand, brandZh);
   if (normalizedBrand === 'BAIC' && /\bm7\b|руйшэн|ruisheng|вейцзя|wangpai/i.test(model)) return 'BAW';
-  if (normalizedBrand === 'GAC' && /^(trumpchi|chuanqi|chuantsi|чуаньци)\b/i.test(model.trim())) return 'GAC Trumpchi';
+  const normalizedModel = englishModel(model).trim();
+  if (normalizedBrand === 'GAC' && /^(?:gac\s+)?(trumpchi|chuanqi|chuantsi)\b/i.test(normalizedModel)) return 'GAC Trumpchi';
   return normalizedBrand;
 }
 
@@ -272,7 +273,7 @@ export function canonicalCatalogModel(brand: string, model: string): string {
   if (brand === 'Hyundai') normalizedModel = normalizedModel.replace(/^Hyundai\s+/i, '').trim();
   if (brand === 'GAC Trumpchi') {
     const withoutBrand = normalizedModel
-      .replace(/^(trumpchi|chuanqi|chuantsi)\s*,?\s*/i, '')
+      .replace(/^(?:gac\s+)?(trumpchi|chuanqi|chuantsi)\s*,?\s*/i, '')
       .replace(/^(trumpchi|chuanqi|chuantsi)\s*,?\s*/i, '')
       .trim();
     if (withoutBrand) return withoutBrand;

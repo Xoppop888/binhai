@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Car, englishBrand, englishModel, formatCny } from '../data/cars';
+import { Car, canonicalCatalogBrand, canonicalCatalogModel, formatCny } from '../data/cars';
 import { estimateVtbCnyRate, fetchCbrRatesForBrowser } from '../lib/siteCustomsCalculator';
 import CarModal from './CarModal';
 
@@ -42,15 +42,15 @@ export default function Catalog({ cars, source, loading = false, unavailable = f
 
   const brandOptions = useMemo(() => {
     const set = new Set<string>();
-    cars.forEach((car) => set.add(englishBrand(car.brand, car.brandZh)));
+    cars.forEach((car) => set.add(canonicalCatalogBrand(car.brand, car.model, car.brandZh)));
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [cars]);
 
   const modelOptions = useMemo(() => {
     const set = new Set<string>();
     cars.forEach((car) => {
-      const brand = englishBrand(car.brand, car.brandZh);
-      if (brandFilter === 'all' || brand === brandFilter) set.add(englishModel(car.model));
+      const brand = canonicalCatalogBrand(car.brand, car.model, car.brandZh);
+      if (brandFilter === 'all' || brand === brandFilter) set.add(canonicalCatalogModel(brand, car.model));
     });
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [cars, brandFilter]);
@@ -62,8 +62,11 @@ export default function Catalog({ cars, source, loading = false, unavailable = f
 
   const filtered = useMemo(() => {
     let result = filter === 'all' ? cars : cars.filter((car) => (car.category || 'used') === filter);
-    if (brandFilter !== 'all') result = result.filter((car) => englishBrand(car.brand, car.brandZh) === brandFilter);
-    if (modelFilter !== 'all') result = result.filter((car) => englishModel(car.model) === modelFilter);
+    if (brandFilter !== 'all') result = result.filter((car) => canonicalCatalogBrand(car.brand, car.model, car.brandZh) === brandFilter);
+    if (modelFilter !== 'all') result = result.filter((car) => {
+      const brand = canonicalCatalogBrand(car.brand, car.model, car.brandZh);
+      return canonicalCatalogModel(brand, car.model) === modelFilter;
+    });
     const budget = Number(maxBudget);
     if (budget > 0) {
       result = result.filter((car) => {
@@ -79,7 +82,7 @@ export default function Catalog({ cars, source, loading = false, unavailable = f
       case 'price_desc': sorted.sort((a, b) => priceInSelectedCurrency(b) - priceInSelectedCurrency(a)); break;
       case 'year_desc': sorted.sort((a, b) => (b.year || 0) - (a.year || 0)); break;
       case 'year_asc': sorted.sort((a, b) => (a.year || 0) - (b.year || 0)); break;
-      case 'brand_az': sorted.sort((a, b) => englishBrand(a.brand, a.brandZh).localeCompare(englishBrand(b.brand, b.brandZh))); break;
+      case 'brand_az': sorted.sort((a, b) => canonicalCatalogBrand(a.brand, a.model, a.brandZh).localeCompare(canonicalCatalogBrand(b.brand, b.model, b.brandZh))); break;
     }
     return sorted;
   }, [cars, filter, brandFilter, modelFilter, sort, currency, cnyToRubRate, maxBudget]);
@@ -111,8 +114,8 @@ export default function Catalog({ cars, source, loading = false, unavailable = f
       {(brandFilter !== 'all' || modelFilter !== 'all' || maxBudget) && <button className="page-button" onClick={() => { changeBrand('all'); setMaxBudget(''); }}>✕ Сбросить фильтры</button>}
     </div>
     {loading ? <div className="catalog-loading" role="status"><div className="loader-ring" /><p>Загружаем полный каталог автомобилей…</p></div> : <div className="car-grid-v2">{visibleCars.map((car) => {
-      const brand = englishBrand(car.brand, car.brandZh);
-      const model = englishModel(car.model);
+      const brand = canonicalCatalogBrand(car.brand, car.model, car.brandZh);
+      const model = canonicalCatalogModel(brand, car.model);
       return <article className="car-card-v2" key={car.id} onClick={() => setSelectedCar(car)} style={{ cursor: 'pointer' }}>
         <button className="car-visual" onClick={(e) => { e.stopPropagation(); setSelectedCar(car); }} aria-label={`Открыть ${brand} ${model}`}>
           <img src={car.image} alt={`${brand} ${model}`} loading="lazy" decoding="async" />

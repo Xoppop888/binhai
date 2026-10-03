@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Car, descriptionFeatures, englishBrand, englishModel, formatCny } from '../data/cars';
+import { Car, canonicalCatalogBrand, canonicalCatalogModel, descriptionFeatures, formatCny } from '../data/cars';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import {
   calculateTurnkeyPrice,
@@ -34,6 +34,8 @@ export default function CarModal({ car, cnyToRubRate = null, onClose }: CarModal
   const [leadName, setLeadName] = useState('');
   const [leadPhone, setLeadPhone] = useState('');
   const [leadStatus, setLeadStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const displayBrand = canonicalCatalogBrand(car.brand, car.model, car.brandZh);
+  const displayModel = canonicalCatalogModel(displayBrand, car.model);
 
   function isRussianPhone(value: string): boolean {
     return /^\+7\s?\(?9\d{2}\)?[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}$/.test(value.trim());
@@ -176,7 +178,7 @@ export default function CarModal({ car, cnyToRubRate = null, onClose }: CarModal
     if (!supabase || !isRussianPhone(leadPhone)) return;
     setLeadStatus('sending');
 
-    const carTitle = `${englishBrand(car.brand, car.brandZh)} ${englishModel(car.model)}${car.year ? `, ${car.year}` : ''}`;
+    const carTitle = `${displayBrand} ${displayModel}${car.year ? `, ${car.year}` : ''}`;
     const isCalculated = calcResult?.ok === true;
     const calculationDetails = isCalculated ? {
       version: 1,
@@ -251,11 +253,11 @@ export default function CarModal({ car, cnyToRubRate = null, onClose }: CarModal
 
   return <><div className="modal-backdrop" onClick={onClose}>
     <div className="modal" onClick={(event) => event.stopPropagation()}>
-      <div className="modal-head"><h3>{englishBrand(car.brand, car.brandZh)} {englishModel(car.model)} {car.year || ''}</h3><button className="modal-close" onClick={onClose} aria-label="Закрыть">×</button></div>
+      <div className="modal-head"><h3>{displayBrand} {displayModel} {car.year || ''}</h3><button className="modal-close" onClick={onClose} aria-label="Закрыть">×</button></div>
       <div className="modal-content">
         <div style={{ position: 'relative' }} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
           <button className="modal-image-button" onClick={openLightbox} aria-label="Открыть фото на весь экран">
-            <img className="modal-main-image" src={images[activeImage]} alt={`${englishBrand(car.brand, car.brandZh)} ${englishModel(car.model)}`} />
+            <img className="modal-main-image" src={images[activeImage]} alt={`${displayBrand} ${displayModel}`} />
             <span className="modal-image-hint">Нажмите для увеличения</span>
           </button>
           {images.length > 1 && <>
@@ -328,7 +330,7 @@ export default function CarModal({ car, cnyToRubRate = null, onClose }: CarModal
   {lightboxOpen && <div className="photo-lightbox" role="dialog" aria-modal="true" aria-label="Галерея фотографий" onClick={closeLightbox}>
     <div className="photo-lightbox-toolbar"><span>{activeImage + 1} / {images.length}</span><button className="photo-lightbox-close" onClick={closeLightbox} aria-label="Закрыть галерею">×</button></div>
     <div className="photo-lightbox-stage" onClick={(event) => event.stopPropagation()} onTouchStart={onLightboxTouchStart} onTouchMove={onLightboxTouchMove} onTouchEnd={onLightboxTouchEnd} onDoubleClick={toggleLightboxZoom}>
-      <img className="photo-lightbox-image" src={images[activeImage]} alt={`${englishBrand(car.brand, car.brandZh)} ${englishModel(car.model)}`} style={{ transform: `translate(${lightboxPan.x}px, ${lightboxPan.y}px) scale(${lightboxZoom})` }} draggable={false} />
+      <img className="photo-lightbox-image" src={images[activeImage]} alt={`${displayBrand} ${displayModel}`} style={{ transform: `translate(${lightboxPan.x}px, ${lightboxPan.y}px) scale(${lightboxZoom})` }} draggable={false} />
     </div>
     {images.length > 1 && <>
       <button className="photo-lightbox-arrow photo-lightbox-prev" onClick={goPrev} aria-label="Предыдущее фото">‹</button>

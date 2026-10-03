@@ -406,6 +406,7 @@ function splitTitle(title) {
     .replace(/октавия/gi, 'Octavia')
     .replace(/рапид/gi, 'Rapid')
     .replace(/суперб/gi, 'Superb')
+    .replace(/^3[\s‑–-]*(?:й|я)?[\s‑–-]*серии$/i, '3 Series')
     .replace(/сильфи|силфи/gi, 'Sylphy')
     .replace(/левин/gi, 'Levin')
     .replace(/яри[сс]\s*l\s*x/gi, 'Yaris L X')
